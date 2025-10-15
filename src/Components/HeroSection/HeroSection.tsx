@@ -7,7 +7,7 @@ const HeroSection = () => {
   return (
     <div className="flex flex-col lg:flex-row items-center justify-between py-16 px-8 lg:px-16 bg-white min-h-[600px] border-b-4 border-black">
       <div className="relative z-10 lg:w-1/2 text-left mb-10 lg:mb-0 "> 
-        <h1 className="text-5xl xl:text-6xl font-black uppercase leading-tight tracking-tighter text-black mb-6 drop-shadow-[4px_4px_0px_rgba(0,0,0,0.2)]">
+        <h1 className="text-5xl xl:text-6xl font-black font-rubik uppercase leading-tight tracking-tighter text-black mb-6 drop-shadow-[4px_4px_0px_rgba(0,0,0,0.2)]">
           OWN THE DREAM,<br />TOGETHER.
         </h1>
         <p className="text-lg md:text-xl text-gray-800 mb-10 font-medium font-rubik">
