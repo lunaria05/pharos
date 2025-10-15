@@ -1,4 +1,5 @@
 import HeroSection from "@/Components/HeroSection/HeroSection";
+import HowItWorks from "@/Components/HeroSection/HowItWorks";
 import RaffleSlider from "@/Components/HeroSection/RaffleSlider";
 import Navbar from "@/Components/Navbar/Navbar";
 import Image from "next/image";
@@ -9,6 +10,7 @@ export default function Home() {
        <Navbar />
     <HeroSection/>
     <RaffleSlider/>
+    <HowItWorks/>
     </div>
   );
 }
