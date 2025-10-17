@@ -97,7 +97,7 @@ const RaffleSlider: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full overflow-hidden border-t-4 border-black bg-white py-24 "> {/* Default font for general text */}
+    <div className="relative w-full overflow-hidden border-b-4 border-black bg-white py-24 "> {/* Default font for general text */}
       {/* You would import 'Alfa Slab One' or your custom 'Runik' font in your global CSS or _app.tsx */}
       {/* For Google Fonts, add <link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&display=swap" rel="stylesheet"> to your _document.tsx or _app.tsx */}
       <h2 className="text-5xl xl:text-6xl font-rubik font-black uppercase text-center text-black mb-28 drop-shadow-[4px_4px_0px_rgba(0,0,0,0.2)]">

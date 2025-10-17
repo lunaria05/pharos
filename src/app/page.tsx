@@ -1,3 +1,4 @@
+import Footer from "@/Components/HeroSection/Footer";
 import HeroSection from "@/Components/HeroSection/HeroSection";
 import HowItWorks from "@/Components/HeroSection/HowItWorks";
 import RaffleSlider from "@/Components/HeroSection/RaffleSlider";
@@ -11,6 +12,7 @@ export default function Home() {
     <HeroSection/>
     <RaffleSlider/>
     <HowItWorks/>
+    {/* <Footer/> */}
     </div>
   );
 }
