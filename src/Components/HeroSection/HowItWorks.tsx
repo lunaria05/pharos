@@ -47,6 +47,7 @@ const HowItWorks = () => {
   });
 
   const rotation = useTransform(scrollYProgress, [0, 1], [0, 240]);
+  const counterRotation = useTransform(rotation, (r) => -r);
 
   useEffect(() => {
     const observers = sectionRefs.current.map((ref, index) => {
@@ -76,7 +77,7 @@ const HowItWorks = () => {
   }, []);
 
   return (
-    <div ref={containerRef} className="w-full border-b-4 border-black bg-white min-h-screen">
+    <div ref={containerRef} className="w-full bg-white min-h-screen">
       {/* Main Title - Sticky */}
       <div className="sticky top-0 z-50 bg-white pt-16 pb-4 px-4 md:px-8 lg:px-12">
         <h2 className="text-5xl xl:text-6xl font-rubik font-black uppercase text-center text-black drop-shadow-[4px_4px_0px_rgba(0,0,0,0.2)]">
@@ -130,7 +131,7 @@ const HowItWorks = () => {
                           >
                             {/* Counter-rotation for planet to stay upright */}
                             <motion.div
-                              style={{ rotate: useTransform(rotation, (r) => -r) }}
+                              style={{ rotate: counterRotation }}
                               className="relative"
                             >
                               {/* Planet Container */}
@@ -279,7 +280,7 @@ const HowItWorks = () => {
                                 }}
                               />
                             </div>
-                              </div>
+                              </div> 
                             </div>
 
                             

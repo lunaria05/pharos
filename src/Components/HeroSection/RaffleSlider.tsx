@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
+import Image, { StaticImageData } from 'next/image';
 import Button from '@/Components/UI/Button';
 import Link from 'next/link';
 
@@ -12,7 +12,7 @@ import pyusd from "@/app/assets/pyusd.png"
 
 interface Raffle {
   id: string;
-  image: any; // Use 'any' or 'StaticImageData' from 'next/image' for imported images
+  image: StaticImageData;
   timeRemaining: {
     days: string; // Added days
     hours: string;
