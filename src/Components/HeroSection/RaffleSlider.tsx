@@ -1,90 +1,30 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import Image, { StaticImageData } from 'next/image';
+import Image from 'next/image';
 import Button from '@/Components/UI/Button';
 import Link from 'next/link';
-
-// Import your raffle images here
-import raffleImage1 from "@/app/assets/shoes-jordan.png"; // Replace with your actual image paths
-import raffleImage2 from "@/app/assets/lottery.png";
-import raffleImage3 from "@/app/assets/concert.png";
-import pyusd from "@/app/assets/pyusd.png"
-
-interface Raffle {
-  id: string;
-  image: StaticImageData;
-  timeRemaining: {
-    days: string; // Added days
-    hours: string;
-    minutes: string;
-    seconds: string; // Keeping seconds for consistency, though image only shows H/M
-  };
-  pricePerTicket: string;
-  link: string;
-  title: string; // Added title for each raffle
-}
-
-const raffles: Raffle[] = [
-  {
-    id: '1',
-    image: raffleImage1,
-    timeRemaining: { days: '02', hours: '10', minutes: '06', seconds: '30' },
-    pricePerTicket: '10 PYUSD',
-    link: '/raffles/1',
-    title: 'The Golden Phoenix', // Example title
-  },
-  {
-    id: '2',
-    image: raffleImage2,
-    timeRemaining: { days: '00', hours: '05', minutes: '45', seconds: '12' },
-    pricePerTicket: '10 PYUSD',
-    link: '/raffles/2',
-    title: 'Mystic Dragon Egg', // Example title
-  },
-  {
-    id: '3',
-    image: raffleImage3,
-    timeRemaining: { days: '01', hours: '00', minutes: '15', seconds: '05' },
-    pricePerTicket: '5 PYUSD',
-    link: '/raffles/3',
-    title: 'Ancient Artifact', // Example title
-  },
-];
+import { raffles, calculateTimeRemaining } from '@/data/raffle';
+import pyusd from "@/app/assets/pyusd.png";
 
 const RaffleSlider: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // In a real application, you'd calculate these dynamically
-  // For now, using the static data for demonstration
-  const [timeRemainingState, setTimeRemainingState] = useState(raffles.map(r => r.timeRemaining));
+  // Calculate time remaining for each raffle dynamically
+  const [timeRemainingState, setTimeRemainingState] = useState(
+    raffles.map(raffle => calculateTimeRemaining(raffle.endDate))
+  );
 
   useEffect(() => {
     const slideInterval = setInterval(() => {
       setCurrentSlide((prevSlide) => (prevSlide + 1) % raffles.length);
     }, 5000); // Change slide every 5 seconds
 
-    // Example of a simple countdown logic (for demonstration)
+    // Update countdown every second based on actual end dates
     const countdownInterval = setInterval(() => {
-      setTimeRemainingState(prevState => prevState.map(time => {
-        let totalSeconds =
-          parseInt(time.days) * 24 * 3600 +
-          parseInt(time.hours) * 3600 +
-          parseInt(time.minutes) * 60 +
-          parseInt(time.seconds);
-
-        if (totalSeconds <= 0) return { days: '00', hours: '00', minutes: '00', seconds: '00' };
-
-        totalSeconds--;
-
-        const days = String(Math.floor(totalSeconds / (24 * 3600))).padStart(2, '0');
-        const hours = String(Math.floor((totalSeconds % (24 * 3600)) / 3600)).padStart(2, '0');
-        const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-        const seconds = String(totalSeconds % 60).padStart(2, '0');
-
-        return { days, hours, minutes, seconds };
-      }));
+      setTimeRemainingState(
+        raffles.map(raffle => calculateTimeRemaining(raffle.endDate))
+      );
     }, 1000);
-
 
     return () => {
       clearInterval(slideInterval);
@@ -111,7 +51,7 @@ const RaffleSlider: React.FC = () => {
           {raffles.map((raffle, index) => (
             <div key={raffle.id} className="w-full flex-shrink-0 flex justify-center">
               <div className="relative bg-gradient-to-br from-white to-gray-50 border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,0.8)] rounded-xl overflow-hidden w-full max-w-6xl">
-                <Link href={raffle.link} className="block group">
+                <Link href={`/raffle/${raffle.id}`} className="block group">
                   <div className="flex flex-col md:flex-row gap-6 md:gap-8 p-6 md:p-10">
                     {/* Left Content Section - Takes majority of space */}
                     <div className="flex-1 flex flex-col justify-between">

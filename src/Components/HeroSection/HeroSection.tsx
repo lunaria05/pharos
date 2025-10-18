@@ -14,7 +14,7 @@ const HeroSection = () => {
           Join transparent, on-chain pools to democratize access to rare assets and experiences.
         </p>
         <Button
-          onClick={() => window.location.href='/raffles'}
+          onClick={() => window.location.href='/raffle'}
           color="pharos-orange" 
           shape="medium-rounded" 
           className="text-xl px-10 py-4"
