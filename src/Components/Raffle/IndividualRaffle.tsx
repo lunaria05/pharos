@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { Raffle, calculateTimeRemaining } from '@/data/raffle';
 import Button from '@/Components/UI/Button';
 import pyusd from "@/app/assets/pyusd.png";
+import { FaCheckCircle } from 'react-icons/fa';
 
 interface IndividualRaffleProps {
   raffle: Raffle;
@@ -12,6 +13,16 @@ interface IndividualRaffleProps {
 const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffle }) => {
   const [timeRemaining, setTimeRemaining] = useState(calculateTimeRemaining(raffle.endDate));
   const [mounted, setMounted] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (copied) {
+      const timer = setTimeout(() => {
+        setCopied(false);
+      }, 2000); // Hide after 2 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [copied]);
 
   useEffect(() => {
     setMounted(true);
@@ -39,8 +50,13 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffle }) => {
     timeZoneName: 'short',
   });
 
+  const handleCopyClick = () => {
+    navigator.clipboard.writeText(raffle.smartContractAddress);
+    setCopied(true);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pharos-yellow/20 to-pharos-orange/10 py-12 px-4 md:px-8 lg:px-12">
+    <div className="min-h-screen font-rubik bg-gradient-to-br from-[#f3a20f]/20 to-[#f97028]/10 py-12 px-4 md:px-8 lg:px-12">
       <div className="max-w-7xl mx-auto">
         {/* Raffle ID Badge - Top */}
         <div
@@ -83,7 +99,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffle }) => {
                 </div>
 
                 {/* Completion Badge */}
-                <div className="absolute bottom-6 right-6 bg-pharos-orange text-black px-6 py-3 border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] font-rubik font-black text-2xl rounded-lg">
+                <div className="absolute bottom-6 right-6 bg-[#f97028] text-black px-6 py-3 border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] font-rubik font-black text-2xl rounded-lg">
                   {raffle.completionPercentage}%
                 </div>
               </div>
@@ -111,7 +127,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffle }) => {
             <div className="bg-white border-4 border-black shadow-[6px_6px_0px_rgba(0,0,0,0.8)] rounded-xl p-6 mb-6">
               <div className="flex justify-between items-center mb-3">
                 <span className="font-rubik font-bold text-gray-700 uppercase text-sm">Raffle Progress</span>
-                <span className="font-rubik font-black text-pharos-orange text-xl">{raffle.completionPercentage}%</span>
+                <span className="font-rubik font-black text-[#f97028] text-xl">{raffle.completionPercentage}%</span>
               </div>
               <div className="relative w-full h-6 bg-gray-200 border-4 border-black rounded-lg overflow-hidden">
                 <div
@@ -139,7 +155,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffle }) => {
               {/* Participants */}
               <div className="bg-white border-4 border-black shadow-[6px_6px_0px_rgba(0,0,0,0.8)] rounded-xl p-5 hover:translate-y-[-4px] hover:shadow-[8px_8px_0px_rgba(0,0,0,0.8)] transition-all duration-200">
                 <p className="text-sm font-rubik font-bold text-gray-600 uppercase mb-2">Participants</p>
-                <p className="text-3xl font-rubik font-black text-pharos-orange">{raffle.participants.toLocaleString()}</p>
+                <p className="text-3xl font-rubik font-black text-black">{raffle.participants.toLocaleString()}</p>
                 <p className="text-xs font-rubik text-gray-500 mt-1">unique entries</p>
               </div>
 
@@ -151,7 +167,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffle }) => {
               </div>
 
               {/* Price Per Ticket */}
-              <div className="bg-gradient-to-br from-pharos-orange to-pharos-yellow border-4 border-black shadow-[6px_6px_0px_rgba(0,0,0,0.8)] rounded-xl p-5 hover:translate-y-[-4px] hover:shadow-[8px_8px_0px_rgba(0,0,0,0.8)] transition-all duration-200">
+              <div className="bg-white border-4 border-black shadow-[6px_6px_0px_rgba(0,0,0,0.8)] rounded-xl p-5 hover:translate-y-[-4px] hover:shadow-[8px_8px_0px_rgba(0,0,0,0.8)] transition-all duration-200">
                 <p className="text-sm font-rubik font-bold text-black uppercase mb-2">Price Per Ticket</p>
                 <div className="flex items-center gap-2">
                   <Image src={pyusd} alt="PYUSD" width={32} height={32} className="object-contain" />
@@ -168,37 +184,37 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffle }) => {
               <div className="flex items-center justify-between gap-3 mb-4">
                 {/* Days */}
                 <div className="flex-1 flex flex-col items-center">
-                  <div className="w-full bg-pharos-orange text-black border-4 border-black rounded-lg py-4 text-4xl font-black shadow-[4px_4px_0px_#000] text-center font-rubik">
+                  <div className="w-full bg-[#f3a20f] text-black border-4 border-black rounded-lg py-4 text-4xl font-black shadow-[4px_4px_0px_#000] text-center font-rubik">
                     {timeRemaining.days}
                   </div>
                   <span className="text-xs md:text-sm font-bold text-black uppercase mt-2 font-rubik">Days</span>
                 </div>
 
-                <div className="text-3xl font-bold text-pharos-orange">:</div>
+                <div className="text-3xl font-bold text-black">:</div>
 
                 {/* Hours */}
                 <div className="flex-1 flex flex-col items-center">
-                  <div className="w-full bg-pharos-orange text-black border-4 border-black rounded-lg py-4 text-4xl font-black shadow-[4px_4px_0px_#000] text-center font-rubik">
+                  <div className="w-full bg-[#f3a20f] text-black border-4 border-black rounded-lg py-4 text-4xl font-black shadow-[4px_4px_0px_#000] text-center font-rubik">
                     {timeRemaining.hours}
                   </div>
                   <span className="text-xs md:text-sm font-bold text-black uppercase mt-2 font-rubik">Hours</span>
                 </div>
 
-                <div className="text-3xl font-bold text-pharos-orange">:</div>
+                <div className="text-3xl font-bold text-black">:</div>
 
                 {/* Minutes */}
                 <div className="flex-1 flex flex-col items-center">
-                  <div className="w-full bg-pharos-orange text-black border-4 border-black rounded-lg py-4 text-4xl font-black shadow-[4px_4px_0px_#000] text-center font-rubik">
+                  <div className="w-full bg-[#f3a20f] text-black border-4 border-black rounded-lg py-4 text-4xl font-black shadow-[4px_4px_0px_#000] text-center font-rubik">
                     {timeRemaining.minutes}
                   </div>
                   <span className="text-xs md:text-sm font-bold text-black uppercase mt-2 font-rubik">Minutes</span>
                 </div>
 
-                <div className="text-3xl font-bold text-pharos-orange">:</div>
+                <div className="text-3xl font-bold text-black">:</div>
 
                 {/* Seconds */}
                 <div className="flex-1 flex flex-col items-center">
-                  <div className="w-full bg-pharos-orange text-black border-4 border-black rounded-lg py-4 text-4xl font-black shadow-[4px_4px_0px_#000] text-center font-rubik">
+                  <div className="w-full bg-[#f3a20f] text-black border-4 border-black rounded-lg py-4 text-4xl font-black shadow-[4px_4px_0px_#000] text-center font-rubik">
                     {timeRemaining.seconds}
                   </div>
                   <span className="text-xs md:text-sm font-bold text-black uppercase mt-2 font-rubik">Seconds</span>
@@ -206,24 +222,32 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffle }) => {
               </div>
 
               {/* End Date Display */}
-              <div className="bg-pharos-yellow/20 border-l-4 border-pharos-orange px-4 py-3 rounded">
+              <div className="bg-[#f3a20f]/20 border-l-4 border-[#f97028] px-4 py-3 rounded">
                 <p className="text-sm font-rubik font-semibold text-gray-700 mb-1">Raffle Ends On</p>
                 <p className="text-lg font-rubik font-black text-black">{formattedEndDate}</p>
-                <p className="text-base font-rubik font-bold text-pharos-orange">{formattedEndTime}</p>
+                <p className="text-base font-rubik font-bold text-[#f97028]">{formattedEndTime}</p>
               </div>
             </div>
 
             {/* Smart Contract Address */}
             <div className="bg-black text-white border-4 border-black shadow-[6px_6px_0px_rgba(243,162,15,1)] rounded-xl p-6 mb-6 hover:translate-y-[-2px] hover:shadow-[8px_8px_0px_rgba(243,162,15,1)] transition-all duration-200">
-              <p className="text-sm font-rubik font-bold uppercase mb-3 text-pharos-yellow">🔐 Smart Contract</p>
+              <p className="text-sm font-rubik font-bold uppercase mb-3 text-[#f3a20f]">🔐 Smart Contract</p>
               <div className="bg-gray-900 border-2 border-pharos-orange rounded-lg px-4 py-3 font-mono text-xs md:text-sm break-all">
                 {raffle.smartContractAddress}
               </div>
               <button
-                onClick={() => navigator.clipboard.writeText(raffle.smartContractAddress)}
-                className="mt-3 text-pharos-yellow hover:text-pharos-orange font-rubik font-bold text-sm uppercase transition-colors duration-200"
+                onClick={handleCopyClick}
+                className="cursor-pointer mt-3 flex items-center gap-2 text-[#f3a20f] hover:text-pharos-orange font-rubik font-bold text-sm uppercase transition-colors duration-200"
               >
-                📋 Copy Address
+                {copied ? (
+                  <span className="text-green-500 flex items-center gap-1">
+                    Copied! <FaCheckCircle />
+                  </span>
+                ) : (
+                  <>
+                    📋 Copy Address
+                  </>
+                )}
               </button>
             </div>
 
