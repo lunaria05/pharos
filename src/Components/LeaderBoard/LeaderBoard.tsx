@@ -4,6 +4,7 @@ import { motion, Variants } from 'framer-motion';
 import { leaderboardUsers, LeaderboardUser } from '@/data/leaderboard';
 import { FaTrophy, FaMedal, FaTicketAlt, FaFire } from 'react-icons/fa';
 import Image from 'next/image';
+import Link from 'next/link';
 
 const LeaderBoard = () => {
   const [mounted, setMounted] = useState(false);
@@ -340,12 +341,12 @@ const LeaderBoard = () => {
             <p className="text-lg font-rubik font-semibold mb-6">
               Join more raffles and increase your chances of winning to move up the leaderboard!
             </p>
-            <a
+            <Link
               href="/raffle"
               className="font-bold uppercase tracking-wide transition-all duration-200 ease-in-out inline-block bg-[#f97028] text-white border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] rounded-lg px-8 py-3 font-rubik hover:shadow-[3px_3px_0px_#000] hover:translate-x-[3px] hover:translate-y-[3px]"
             >
               Browse Raffles →
-            </a>
+            </Link>
           </div>
         </motion.div>
       </div>
