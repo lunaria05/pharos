@@ -3,8 +3,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import React, { useState } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
 import Button from '@/Components/UI/Button';
 import logo from "@/app/assets/logo-p.png"
+import { TbCopy, TbLogout } from 'react-icons/tb';
+import { IoCopy } from 'react-icons/io5';
 
 // Inline SVG for the Menu icon
 const MenuIcon = () => (
@@ -22,17 +25,46 @@ const MenuIcon = () => (
 
 // Menu items configuration
 const menuItems = [
-  { name: 'Raffles', href: '/raffle', color: 'bg-[#FFE455]' },
-  { name: 'Leaderboard', href: '/leaderboard', color: 'bg-[#A6FAFF]' },
-  { name: 'Profile', href: '/profile', color: 'bg-[#FF6B9D]' },
-  { name: 'Admin Dashboard', href: '/admin', color: 'bg-[#C0F7B4]' },
+  { name: 'Raffles', href: '/raffle', color: 'bg-[#f97028]' },
+  { name: 'Leaderboard', href: '/leaderboard', color: 'bg-[#f489a3]' },
+  { name: 'Profile', href: '/profile', color: 'bg-[#f0bb0d]' },
+  { name: 'Admin Dashboard', href: '/admin', color: 'bg-[#8b5cf6]' },
 ];
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isWalletMenuOpen, setIsWalletMenuOpen] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  const { login, logout, authenticated, user } = usePrivy();
 
   const handleMenuClick = () => {
     setIsMenuOpen(!isMenuOpen);
+  };
+
+  const handleWalletClick = () => {
+    if (authenticated) {
+      setIsWalletMenuOpen(!isWalletMenuOpen);
+    } else {
+      login();
+    }
+  };
+
+  const handleCopyAddress = async () => {
+    if (user?.wallet?.address) {
+      await navigator.clipboard.writeText(user.wallet.address);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }
+  };
+
+  const handleDisconnect = () => {
+    logout();
+    setIsWalletMenuOpen(false);
+  };
+
+  const formatAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
   return (
@@ -71,7 +103,7 @@ const Navbar: React.FC = () => {
                   key={index}
                   href={item.href}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`${item.color} border-4 border-black px-6 py-3 font-black text-black uppercase tracking-tight
+                  className={`${item.color} border-4 border-black px-6 py-3 font-black text-white uppercase tracking-tight
                     shadow-[4px_4px_0px_#000] hover:shadow-[2px_2px_0px_#000]
                     hover:translate-x-[2px] hover:translate-y-[2px]
                     active:shadow-none active:translate-x-[4px] active:translate-y-[4px]
@@ -86,15 +118,58 @@ const Navbar: React.FC = () => {
       </div>
 
       {/* Connect Wallet button on the right */}
-      <div className="flex items-center">
+      <div className="flex items-center relative">
         <Button
-          onClick={() => console.log('Connect Wallet clicked')}
+          onClick={handleWalletClick}
           color="pharos-orange"
           shape="full-rounded"
           className="cursor-pointer px-6 py-2 text-lg"
         >
-          Connect Wallet
+          {authenticated && user?.wallet?.address
+            ? formatAddress(user.wallet.address)
+            : 'Connect Wallet'}
         </Button>
+
+        {/* Wallet Dropdown Menu */}
+        {authenticated && user?.wallet?.address && (
+          <div
+            className={`absolute top-full mt-4 right-0 transition-all duration-300 ease-out origin-top ${
+              isWalletMenuOpen
+                ? 'opacity-100 scale-100 visible'
+                : 'opacity-0 scale-0 invisible'
+            }`}
+          >
+            <div className="bg-white border-4 border-black shadow-[8px_8px_0px_#000] p-3 min-w-[240px]">
+              <div className="flex flex-col gap-3">
+                {/* Copy Address Button */}
+                <button
+                  onClick={handleCopyAddress}
+                  className="bg-[#f3a20f] border-4 border-black px-6 py-3 font-black cursor-pointer text-white uppercase tracking-tight
+                    shadow-[4px_4px_0px_#000] hover:shadow-[2px_2px_0px_#000]
+                    hover:translate-x-[2px] hover:translate-y-[2px]
+                    active:shadow-none active:translate-x-[4px] active:translate-y-[4px]
+                    transition-all duration-100 text-center text-sm flex items-center justify-center gap-2"
+                >
+                  <IoCopy className='text-lg'/>
+                  {copySuccess ? 'Copied!' : 'Copy Address'}
+                </button>
+
+                {/* Disconnect Button */}
+                <button
+                  onClick={handleDisconnect}
+                  className="bg-[#8b5cf6] cursor-pointer border-4 border-black px-6 py-3 font-black text-white uppercase tracking-tight
+                    shadow-[4px_4px_0px_#000] hover:shadow-[2px_2px_0px_#000]
+                    hover:translate-x-[2px] hover:translate-y-[2px]
+                    active:shadow-none active:translate-x-[4px] active:translate-y-[4px]
+                    transition-all duration-100 text-center text-sm flex items-center justify-center gap-2"
+                >
+                  <TbLogout className='font-bold text-xl' />
+                  Disconnect
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Mobile Hamburger Menu Button */}
@@ -135,11 +210,14 @@ const Navbar: React.FC = () => {
         </div>
       </div>
 
-      {/* Overlay to close menu when clicking outside */}
-      {isMenuOpen && (
+      {/* Overlay to close menus when clicking outside */}
+      {(isMenuOpen || isWalletMenuOpen) && (
         <div
           className="fixed inset-0 z-[-1]"
-          onClick={() => setIsMenuOpen(false)}
+          onClick={() => {
+            setIsMenuOpen(false);
+            setIsWalletMenuOpen(false);
+          }}
         />
       )}
     </nav>
