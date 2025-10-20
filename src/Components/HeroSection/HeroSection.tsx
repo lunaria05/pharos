@@ -2,6 +2,7 @@
 import Button from '@/Components/UI/Button'; // Adjusted path to be consistent with previous examples
 import Image from 'next/image';
 import pharosImage from "@/app/assets/pharos-landing.png"; // Renamed to avoid conflict, good practice
+import { FaArrowRight } from 'react-icons/fa6';
 
 const HeroSection = () => {
   return (
@@ -17,9 +18,9 @@ const HeroSection = () => {
           onClick={() => window.location.href='/raffle'}
           color="pharos-orange" 
           shape="medium-rounded" 
-          className="text-xl px-10 py-4"
+          className="text-xl px-10 py-4 flex items-center gap-2"
         >
-          Explore Raffles &rarr;
+          Explore Raffles <FaArrowRight />
         </Button>
       </div>
 

@@ -5,6 +5,7 @@ import Button from '@/Components/UI/Button';
 import Link from 'next/link';
 import { raffles, calculateTimeRemaining } from '@/data/raffle';
 import pyusd from "@/app/assets/pyusd.png";
+import { FaArrowRight } from 'react-icons/fa6';
 
 const RaffleSlider: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -112,12 +113,12 @@ const RaffleSlider: React.FC = () => {
                       <Button
                         color="pharos-orange"
                         shape="medium-rounded"
-                        className="w-full md:w-auto text-lg md:text-xl py-4 px-8 mt-6 font-black uppercase"
+                        className="w-full flex gap-2 items-center justify-center md:w-auto text-lg md:text-xl py-4 px-8 mt-6 font-black uppercase"
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent Link from triggering twice
                         }}
                       >
-                        View Raffle &rarr;
+                        View Raffle <FaArrowRight />
                       </Button>
                     </div>
 

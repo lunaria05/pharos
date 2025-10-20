@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { raffles, calculateTimeRemaining } from '@/data/raffle';
 import Button from '@/Components/UI/Button';
 import pyusd from "@/app/assets/pyusd.png";
+import { FaArrowRight } from 'react-icons/fa6';
+import { FcAlarmClock } from 'react-icons/fc';
 
 const RaffleList: React.FC = () => {
   const [timeRemainingList, setTimeRemainingList] = useState(
@@ -91,8 +93,8 @@ const RaffleList: React.FC = () => {
 
                     {/* Countdown Timer */}
                     <div className="mb-4">
-                      <p className="text-xs font-rubik font-bold text-gray-600 uppercase mb-2 tracking-wide">
-                        ⏱️ Time Remaining
+                      <p className="text-xs flex gap-2 items-center font-rubik font-bold text-gray-600 uppercase mb-2 tracking-wide">
+                        <FcAlarmClock/> Time Remaining
                       </p>
                       <div className="flex items-center justify-between gap-2">
                         {/* Hours */}
@@ -165,9 +167,9 @@ const RaffleList: React.FC = () => {
                       <Button
                         color="pharos-orange"
                         shape="medium-rounded"
-                        className="w-full text-lg py-3 px-6 uppercase"
+                        className="w-full flex items-center gap-2 justify-center text-lg py-3 px-6 uppercase"
                       >
-                        View Raffle &rarr;
+                        View Raffle <FaArrowRight />
                       </Button>
                     </Link>
                   </div>

@@ -24,4 +24,38 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  cursor: none !important;
+}
+
+/* Hide default cursor on all elements */
+* {
+  cursor: none !important;
+}
+
+/* Ensure custom cursor is always visible */
+.custom-cursor {
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Override cursor for input fields to show text cursor */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+input[type="search"],
+input[type="date"],
+input[type="time"],
+textarea,
+select {
+  cursor: text !important;
+}
+
+/* Add smooth transitions for hover states */
+button,
+a,
+.cursor-pointer {
+  transition: transform 0.2s ease;
 }

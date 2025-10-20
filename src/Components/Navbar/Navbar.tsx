@@ -2,12 +2,19 @@
 "use client"
 import Image from 'next/image';
 import Link from 'next/link';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import Button from '@/Components/UI/Button';
 import logo from "@/app/assets/logo-p.png"
 import { TbCopy, TbLogout } from 'react-icons/tb';
-import { IoCopy } from 'react-icons/io5';
+import { IoCopy, IoMenu } from 'react-icons/io5';
+
+// Admin wallet addresses - Should match the ones in AdminDashboard
+const ADMIN_ADDRESSES = [
+  '0xBb4c2baB6B2de45F9CC7Ab41087b730Eaa4adE31', // Example admin address
+  '0x13F00AF21F24988528E79b57122EfD0000d62445'
+  // Add more admin addresses as needed
+];
 
 // Inline SVG for the Menu icon
 const MenuIcon = () => (
@@ -23,20 +30,45 @@ const MenuIcon = () => (
   </svg>
 );
 
-// Menu items configuration
-const menuItems = [
+// Base menu items (visible to all users)
+const baseMenuItems = [
   { name: 'Raffles', href: '/raffle', color: 'bg-[#f97028]' },
   { name: 'Leaderboard', href: '/leaderboard', color: 'bg-[#f489a3]' },
   { name: 'Profile', href: '/profile', color: 'bg-[#f0bb0d]' },
-  { name: 'Admin Dashboard', href: '/admin', color: 'bg-[#8b5cf6]' },
 ];
+
+// Admin-only menu item
+const adminMenuItem = { name: 'Admin Dashboard', href: '/admin-dashboard', color: 'bg-[#8b5cf6]' };
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isWalletMenuOpen, setIsWalletMenuOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [menuItems, setMenuItems] = useState(baseMenuItems);
 
   const { login, logout, authenticated, user } = usePrivy();
+
+  // Check if user is admin
+  useEffect(() => {
+    if (authenticated && user?.wallet?.address) {
+      const userAddress = user.wallet.address.toLowerCase();
+      const isUserAdmin = ADMIN_ADDRESSES.some(
+        addr => addr.toLowerCase() === userAddress
+      );
+      setIsAdmin(isUserAdmin);
+
+      // Update menu items based on admin status
+      if (isUserAdmin) {
+        setMenuItems([...baseMenuItems, adminMenuItem]);
+      } else {
+        setMenuItems(baseMenuItems);
+      }
+    } else {
+      setIsAdmin(false);
+      setMenuItems(baseMenuItems);
+    }
+  }, [authenticated, user]);
 
   const handleMenuClick = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -82,9 +114,9 @@ const Navbar: React.FC = () => {
           onClick={handleMenuClick}
           color="pharos-yellow"
           shape="medium-rounded"
-          className="cursor-pointer  px-6 py-2 text-lg flex items-center"
+          className="cursor-pointer gap-1 px-6 py-2 text-lg flex items-center"
         >
-          <MenuIcon />
+          <IoMenu className='text-2xl'/>
           Menu
         </Button>
 

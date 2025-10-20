@@ -5,6 +5,10 @@ import { Raffle, calculateTimeRemaining } from '@/data/raffle';
 import Button from '@/Components/UI/Button';
 import pyusd from "@/app/assets/pyusd.png";
 import { FaCheckCircle } from 'react-icons/fa';
+import { FcAlarmClock, FcUnlock } from 'react-icons/fc';
+import { BiSolidLock } from 'react-icons/bi';
+import { FaCopy } from 'react-icons/fa6';
+import { IoTicketSharp } from 'react-icons/io5';
 
 interface IndividualRaffleProps {
   raffle: Raffle;
@@ -178,8 +182,8 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffle }) => {
 
             {/* Countdown Timer */}
             <div className="bg-gradient-to-br from-white to-gray-50 border-4 border-black shadow-[6px_6px_0px_rgba(0,0,0,0.8)] rounded-xl p-6 mb-6">
-              <p className="text-base font-rubik font-bold text-gray-700 uppercase mb-4 tracking-wide">
-                ⏱️ Time Remaining
+              <p className="text-base flex items-center gap-2 font-rubik font-bold text-gray-700 uppercase mb-4 tracking-wide">
+              <FcAlarmClock /> Time Remaining
               </p>
               <div className="flex items-center justify-between gap-3 mb-4">
                 {/* Days */}
@@ -231,7 +235,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffle }) => {
 
             {/* Smart Contract Address */}
             <div className="bg-black text-white border-4 border-black shadow-[6px_6px_0px_rgba(243,162,15,1)] rounded-xl p-6 mb-6 hover:translate-y-[-2px] hover:shadow-[8px_8px_0px_rgba(243,162,15,1)] transition-all duration-200">
-              <p className="text-sm font-rubik font-bold uppercase mb-3 text-[#f3a20f]">🔐 Smart Contract</p>
+              <p className="text-sm flex items-center gap-2 font-rubik font-bold uppercase mb-3 text-[#f3a20f]"><BiSolidLock/> Smart Contract</p>
               <div className="bg-gray-900 border-2 border-pharos-orange rounded-lg px-4 py-3 font-mono text-xs md:text-sm break-all">
                 {raffle.smartContractAddress}
               </div>
@@ -245,7 +249,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffle }) => {
                   </span>
                 ) : (
                   <>
-                    📋 Copy Address
+                    <FaCopy/> Copy Address
                   </>
                 )}
               </button>
@@ -255,9 +259,9 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffle }) => {
             <Button
               color="pharos-orange"
               shape="medium-rounded"
-              className="text-xl md:text-2xl py-6 px-8 w-full cursor-pointer"
+              className="text-xl flex gap-2 items-center justify-center md:text-2xl py-6 px-8 w-full cursor-pointer"
             >
-              🎫 Buy Tickets Now
+              <IoTicketSharp /> Buy Tickets Now
             </Button>
 
             {/* Additional Info */}
