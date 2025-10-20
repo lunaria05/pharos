@@ -12,7 +12,8 @@ import { IoCopy, IoMenu } from 'react-icons/io5';
 // Admin wallet addresses - Should match the ones in AdminDashboard
 const ADMIN_ADDRESSES = [
   '0xBb4c2baB6B2de45F9CC7Ab41087b730Eaa4adE31', // Example admin address
-  '0x13F00AF21F24988528E79b57122EfD0000d62445'
+  '0x13F00AF21F24988528E79b57122EfD0000d62445',
+  '0xa0f97344e9699F0D5d54c4158F9cf9892828C7F8'
   // Add more admin addresses as needed
 ];
 

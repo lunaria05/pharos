@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { leaderboardUsers, LeaderboardUser } from '@/data/leaderboard';
-import { FaTrophy, FaMedal, FaTicketAlt, FaFire } from 'react-icons/fa';
+import { FaTrophy, FaMedal, FaTicketAlt, FaFire, FaArrowRight } from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -343,9 +343,9 @@ const LeaderBoard = () => {
             </p>
             <Link
               href="/raffle"
-              className="font-bold uppercase tracking-wide transition-all duration-200 ease-in-out inline-block bg-[#f97028] text-white border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] rounded-lg px-8 py-3 font-rubik hover:shadow-[3px_3px_0px_#000] hover:translate-x-[3px] hover:translate-y-[3px]"
+              className="flex w-fit mx-auto items-center justify-center gap-2 cursor-pointer font-bold uppercase tracking-wide transition-all duration-200 ease-in-out bg-[#f97028] text-white border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] rounded-lg px-8 py-3 font-rubik hover:shadow-[3px_3px_0px_#000] hover:translate-x-[3px] hover:translate-y-[3px]"
             >
-              Browse Raffles →
+              Browse Raffles <FaArrowRight />
             </Link>
           </div>
         </motion.div>
