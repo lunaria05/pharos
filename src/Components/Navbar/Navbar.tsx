@@ -8,6 +8,8 @@ import Button from '@/Components/UI/Button';
 import logo from "@/app/assets/logo-p.png"
 import { TbCopy, TbLogout } from 'react-icons/tb';
 import { IoCopy, IoMenu } from 'react-icons/io5';
+import { FaWallet } from 'react-icons/fa';
+import { FaUser } from 'react-icons/fa';
 
 // Admin wallet addresses - Should match the ones in AdminDashboard
 const ADMIN_ADDRESSES = [
@@ -17,19 +19,6 @@ const ADMIN_ADDRESSES = [
   // Add more admin addresses as needed
 ];
 
-// Inline SVG for the Menu icon
-const MenuIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="h-6 w-6 mr-2"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={3}
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-  </svg>
-);
 
 // Base menu items (visible to all users)
 const baseMenuItems = [
@@ -101,7 +90,7 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <nav className="flex font-rubik items-center justify-between p-4 border-b-4 border-black bg-white relative z-50">
+    <nav className="flex font-rubik items-center justify-between p-2 bp-xs:p-4 border-b-4 border-black bg-white relative z-50">
       {/* Logo on the left */}
       <div className="flex items-center">
         <Link href="/" className="flex items-center">
@@ -156,17 +145,19 @@ const Navbar: React.FC = () => {
           onClick={handleWalletClick}
           color="pharos-orange"
           shape="full-rounded"
-          className="cursor-pointer px-6 py-2 text-lg"
+          className="cursor-pointer  md:aspect-auto hidden md:flex justify-center items-center md:px-6 md:py-2 text-lg"
         >
+          <span className='hidden md:block'>
           {authenticated && user?.wallet?.address
             ? formatAddress(user.wallet.address)
             : 'Connect Wallet'}
+            </span>
         </Button>
 
         {/* Wallet Dropdown Menu */}
         {authenticated && user?.wallet?.address && (
           <div
-            className={`absolute top-full mt-4 right-0 transition-all duration-300 ease-out origin-top ${
+            className={`absolute hidden md:block top-full mt-4 right-0 transition-all duration-300 ease-out origin-top ${
               isWalletMenuOpen
                 ? 'opacity-100 scale-100 visible'
                 : 'opacity-0 scale-0 invisible'
@@ -205,13 +196,68 @@ const Navbar: React.FC = () => {
         )}
       </div>
 
+<div className='md:hidden flex items-center gap-2'>
+  <div className='relative'>
+<Button
+          onClick={handleWalletClick}
+          color="pharos-orange"
+          shape="full-rounded"
+          className="cursor-pointer aspect-square md:aspect-auto w-4 md:w-auto flex justify-center items-center md:px-6 md:py-2 text-lg"
+        >
+          {/* <span className='hidden md:block'>
+          {authenticated && user?.wallet?.address
+            ? formatAddress(user.wallet.address)
+            : 'Connect Wallet'}
+            </span> */}
+            <span className='md:hidden '>{authenticated && user?.wallet?.address ? <FaUser className='text-xl'/> : <FaWallet className='text-xl'/>}</span>
+        </Button>
+        {authenticated && user?.wallet?.address && (
+          <div
+            className={`absolute md:hidden top-full mt-4 right-0 transition-all duration-300 ease-out origin-top ${
+              isWalletMenuOpen
+                ? 'opacity-100 scale-100 visible'
+                : 'opacity-0 scale-0 invisible'
+            }`}
+          >
+            <div className="bg-white border-4 border-black shadow-[8px_8px_0px_#000] p-3 min-w-[240px]">
+              <div className="flex flex-col gap-3">
+                {/* Copy Address Button */}
+                <button
+                  onClick={handleCopyAddress}
+                  className="bg-[#f3a20f] border-4 border-black px-6 py-3 font-black cursor-pointer text-white uppercase tracking-tight
+                    shadow-[4px_4px_0px_#000] hover:shadow-[2px_2px_0px_#000]
+                    hover:translate-x-[2px] hover:translate-y-[2px]
+                    active:shadow-none active:translate-x-[4px] active:translate-y-[4px]
+                    transition-all duration-100 text-center text-sm flex items-center justify-center gap-2"
+                >
+                  <IoCopy className='text-lg'/>
+                  {copySuccess ? 'Copied!' : 'Copy Address'}
+                </button>
+
+                {/* Disconnect Button */}
+                <button
+                  onClick={handleDisconnect}
+                  className="bg-[#8b5cf6] cursor-pointer border-4 border-black px-6 py-3 font-black text-white uppercase tracking-tight
+                    shadow-[4px_4px_0px_#000] hover:shadow-[2px_2px_0px_#000]
+                    hover:translate-x-[2px] hover:translate-y-[2px]
+                    active:shadow-none active:translate-x-[4px] active:translate-y-[4px]
+                    transition-all duration-100 text-center text-sm flex items-center justify-center gap-2"
+                >
+                  <TbLogout className='font-bold text-xl' />
+                  Disconnect
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        </div>
       {/* Mobile Hamburger Menu Button */}
       <div className="md:hidden relative">
         <button
           onClick={handleMenuClick}
-          className="text-black text-3xl p-2 border-4 border-black shadow-[2px_2px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all duration-100"
+          className="text-white text-3xl bg-[#f3a20f] p-1 border-4 border-black shadow-[3px_3px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all duration-100"
         >
-          &#9776;
+          <IoMenu/>
         </button>
 
         {/* Mobile Menu Dropdown */}
@@ -241,6 +287,7 @@ const Navbar: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Overlay to close menus when clicking outside */}

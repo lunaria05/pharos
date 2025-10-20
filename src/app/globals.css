@@ -11,6 +11,8 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-rubik: var(--font-rubik);
+  --breakpoint-xs: 400px;
+  --breakpoint-bp-xs: 450px;
 }
 
 @media (prefers-color-scheme: dark) {
