@@ -16,7 +16,7 @@ contract Raffle is IEntropyConsumer, Ownable, ReentrancyGuard {
     IERC20 public pyusdToken;
 
     enum PrizeType { Crypto, Physical, Digital }
-
+ 
     // Raffle details
     PrizeType public prizeType;
     uint256 public prizeAmount; // For crypto in PYUSD (with decimals)
