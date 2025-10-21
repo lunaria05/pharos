@@ -39,3 +39,33 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# hardhat
+cache/
+artifacts/
+typechain-types/
+typechain/
+coverage/
+coverage.json
+
+# hardhat ignition
+ignition/deployments/chain-*.json
+
+# hardhat gas reporter
+gas-report.txt
+
+# hardhat console
+.hardhat/
+
+# solidity
+*.sol.bak
+
+# deployment artifacts
+deployments/
+deployments.json
+
+# local environment
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
