@@ -14,6 +14,7 @@ contract Raffle is IEntropyConsumer, Ownable, ReentrancyGuard {
     IEntropy public entropy;
     address public provider;
     IERC20 public pyusdToken;
+    address public factory; // Reference to factory for funding
 
     enum PrizeType { Crypto, Physical, Digital }
  
@@ -56,11 +57,13 @@ contract Raffle is IEntropyConsumer, Ownable, ReentrancyGuard {
         uint256 _maxTicketsPerUser,
         uint256 _endTime,
         uint256 _houseFeePercentage,
-        address _admin
+        address _admin,
+        address _factory
     ) Ownable(_admin) {
         entropy = IEntropy(_entropyAddress);
         provider = _provider;
         pyusdToken = IERC20(_pyusdToken);
+        factory = _factory;
         prizeType = _prizeType;
         prizeAmount = _prizeAmount;
         prizeDescription = _prizeDescription;
@@ -110,6 +113,35 @@ contract Raffle is IEntropyConsumer, Ownable, ReentrancyGuard {
         emit RaffleClosed(currentSequenceNumber);
     }
 
+    // Auto-close raffle when conditions are met (admin only)
+    function closeIfReady() external onlyOwner {
+        require(!isClosed, "Already closed");
+        require(block.timestamp >= endTime || totalTicketsSold >= maxTickets, "Not ready to close");
+        require(totalTicketsSold > 0, "No entrants");
+
+        uint128 fee = entropy.getFee(provider);
+        
+        // Check if we have enough ETH, if not request from factory
+        if (address(this).balance < fee) {
+            // Request funding from factory
+            (bool success, ) = factory.call(
+                abi.encodeWithSignature("requestEntropyFunding(address)", address(this))
+            );
+            require(success, "Failed to get funding from factory");
+        }
+        
+        require(address(this).balance >= fee, "Insufficient ETH fee balance");
+
+        // Generate random commitment for automatic closing
+        bytes32 randomCommitment = keccak256(abi.encodePacked(block.timestamp, block.difficulty, msg.sender));
+        
+        userCommitment = randomCommitment;
+        currentSequenceNumber = entropy.requestWithCallback{value: fee}(provider, randomCommitment);
+        pendingRequests[currentSequenceNumber] = true;
+        isClosed = true;
+        emit RaffleClosed(currentSequenceNumber);
+    }
+
     // Pyth Entropy callback (called by Entropy contract after reveal)
     function entropyCallback(uint64 sequenceNumber, address _provider, bytes32 randomNumber) internal override {
         require(pendingRequests[sequenceNumber], "Invalid request");
@@ -138,6 +170,19 @@ contract Raffle is IEntropyConsumer, Ownable, ReentrancyGuard {
         require(!prizeClaimed, "Prize already claimed");
 
         uint256 totalPot = pyusdToken.balanceOf(address(this));
+        
+        // If no PYUSD tokens, just return ETH to factory
+        if (totalPot == 0) {
+            uint256 ethBalance = address(this).balance;
+            if (ethBalance > 0) {
+                (bool success, ) = payable(factory).call{value: ethBalance}("");
+                require(success, "Failed to return ETH to factory");
+            }
+            prizeClaimed = true;
+            emit PrizeDistributed(winner, 0);
+            return;
+        }
+
         uint256 houseFee = (totalPot * houseFeePercentage) / 10000; // e.g., 3% = 300 / 10000 = 0.03
         uint256 winnerAmount = totalPot - houseFee;
 
@@ -150,6 +195,13 @@ contract Raffle is IEntropyConsumer, Ownable, ReentrancyGuard {
 
         // Transfer house fee to admin
         pyusdToken.safeTransfer(owner(), houseFee);
+
+        // Return leftover ETH to factory
+        uint256 ethBalance = address(this).balance;
+        if (ethBalance > 0) {
+            (bool success, ) = payable(factory).call{value: ethBalance}("");
+            require(success, "Failed to return ETH to factory");
+        }
 
         prizeClaimed = true;
         emit PrizeDistributed(winner, winnerAmount);
