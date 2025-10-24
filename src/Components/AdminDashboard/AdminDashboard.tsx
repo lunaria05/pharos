@@ -22,6 +22,8 @@ interface RaffleFormData {
   title: string
   description: string
   pricePerTicket: string
+  startDate: string
+  startTime: string
   endDate: string
   endTime: string
   availableTickets: string
@@ -57,6 +59,8 @@ const AdminDashboard = () => {
     title: '',
     description: '',
     pricePerTicket: '',
+    startDate: '',
+    startTime: '',
     endDate: '',
     endTime: '',
     availableTickets: '',
@@ -144,7 +148,7 @@ const AdminDashboard = () => {
       
       // RaffleFactory ABI (compatible with old factory)
       const factoryAbi = [
-        "function createRaffle(uint8 _prizeType, uint256 _prizeAmount, string _prizeDescription, uint256 _ticketPrice, uint256 _maxTickets, uint256 _maxTicketsPerUser, uint256 _endTime, uint256 _houseFeePercentage) external returns (address)",
+        "function createRaffle(uint8 _prizeType, uint256 _prizeAmount, string _prizeDescription, uint256 _ticketPrice, uint256 _maxTickets, uint256 _maxTicketsPerUser, uint256 _startTime, uint256 _endTime, uint256 _houseFeePercentage) external returns (address)",
         "function fundingAmount() external view returns (uint256)"
       ]
       
@@ -176,8 +180,18 @@ const AdminDashboard = () => {
       const maxTicketsPerUser = parseInt(formData.maxTicketsPerUser)
       
       // Convert date and time to Unix timestamp
+      const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`)
+      const startTime = Math.floor(startDateTime.getTime() / 1000)
       const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`)
       const endTime = Math.floor(endDateTime.getTime() / 1000)
+      
+      // Validate timing
+      if (startTime >= endTime) {
+        throw new Error('Start time must be before end time')
+      }
+      if (startTime <= Math.floor(Date.now() / 1000)) {
+        throw new Error('Start time must be in the future')
+      }
       
       const houseFeePercentage = parseInt(formData.houseFeePercentage) * 100 // Convert to basis points (3% = 300)
       
@@ -188,6 +202,7 @@ const AdminDashboard = () => {
         ticketPrice: ethers.formatEther(ticketPrice),
         maxTickets,
         maxTicketsPerUser,
+        startTime: new Date(startTime * 1000).toLocaleString(),
         endTime: new Date(endTime * 1000).toLocaleString(),
         houseFeePercentage
       })
@@ -195,16 +210,17 @@ const AdminDashboard = () => {
       // Try to call without ETH first, if it fails, try with ETH
       let tx
       try {
-        tx = await factory.createRaffle(
-          prizeType,
-          prizeAmount,
-          prizeDescription,
-          ticketPrice,
-          maxTickets,
-          maxTicketsPerUser,
-          endTime,
-          houseFeePercentage
-        )
+          tx = await factory.createRaffle(
+            prizeType,
+            prizeAmount,
+            prizeDescription,
+            ticketPrice,
+            maxTickets,
+            maxTicketsPerUser,
+            startTime,
+            endTime,
+            houseFeePercentage
+          )
       } catch (error) {
         console.log('No ETH payment failed, trying with ETH payment...')
         const fundingAmount = await factory.fundingAmount()
@@ -215,6 +231,7 @@ const AdminDashboard = () => {
           ticketPrice,
           maxTickets,
           maxTicketsPerUser,
+          startTime,
           endTime,
           houseFeePercentage,
           { value: fundingAmount }
@@ -479,6 +496,8 @@ const AdminDashboard = () => {
             title: '',
             description: '',
             pricePerTicket: '',
+            startDate: '',
+            startTime: '',
             endDate: '',
             endTime: '',
             availableTickets: '',
@@ -899,6 +918,36 @@ const AdminDashboard = () => {
                 <p className="text-sm text-gray-600 mt-1 font-bold">
                   Platform fee percentage (e.g., 3 for 3%)
                 </p>
+              </div>
+
+              {/* Start Date */}
+              <div>
+                <label className="block font-black text-lg mb-2 uppercase">
+                  Start Date *
+                </label>
+                <input
+                  type="date"
+                  name="startDate"
+                  value={formData.startDate}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full border-4 border-black px-4 py-3 font-bold text-lg focus:outline-none focus:ring-4 focus:ring-[#f97028]"
+                />
+              </div>
+
+              {/* Start Time */}
+              <div>
+                <label className="block font-black text-lg mb-2 uppercase">
+                  Start Time *
+                </label>
+                <input
+                  type="time"
+                  name="startTime"
+                  value={formData.startTime}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full border-4 border-black px-4 py-3 font-bold text-lg focus:outline-none focus:ring-4 focus:ring-[#f97028]"
+                />
               </div>
 
               {/* End Date */}

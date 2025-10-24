@@ -27,6 +27,7 @@ interface RaffleData {
   totalTickets: number;
   ticketsSold: number;
   endTime: number;
+  startTime: number;
   isClosed: boolean;
   winner: string;
   maxTicketsPerUser: number;
@@ -49,14 +50,32 @@ const RaffleList: React.FC = () => {
   const [distributeSuccess, setDistributeSuccess] = useState<string | null>(null);
 
   // Calculate time remaining for a raffle
-  const calculateTimeRemaining = (endTime: number) => {
+  const calculateTimeRemaining = (startTime: number, endTime: number) => {
     const now = Math.floor(Date.now() / 1000);
-    const timeLeft = endTime - now;
     
-    if (timeLeft <= 0) {
-      return { hours: '00', minutes: '00', seconds: '00', expired: true };
+    // If raffle hasn't started yet
+    if (now < startTime) {
+      const timeUntilStart = startTime - now;
+      const hours = Math.floor(timeUntilStart / 3600);
+      const minutes = Math.floor((timeUntilStart % 3600) / 60);
+      const seconds = timeUntilStart % 60;
+      
+      return {
+        hours: hours.toString().padStart(2, '0'),
+        minutes: minutes.toString().padStart(2, '0'),
+        seconds: seconds.toString().padStart(2, '0'),
+        expired: false,
+        notStarted: true
+      };
     }
     
+    // If raffle has ended
+    if (now >= endTime) {
+      return { hours: '00', minutes: '00', seconds: '00', expired: true, notStarted: false };
+    }
+    
+    // Raffle is active
+    const timeLeft = endTime - now;
     const hours = Math.floor(timeLeft / 3600);
     const minutes = Math.floor((timeLeft % 3600) / 60);
     const seconds = timeLeft % 60;
@@ -65,7 +84,8 @@ const RaffleList: React.FC = () => {
       hours: hours.toString().padStart(2, '0'),
       minutes: minutes.toString().padStart(2, '0'),
       seconds: seconds.toString().padStart(2, '0'),
-      expired: false
+      expired: false,
+      notStarted: false
     };
   };
 
@@ -297,6 +317,7 @@ const RaffleList: React.FC = () => {
         "function maxTickets() external view returns (uint256)",
         "function totalTicketsSold() external view returns (uint256)",
         "function endTime() external view returns (uint256)",
+        "function startTime() external view returns (uint256)",
         "function isClosed() external view returns (bool)",
         "function winner() external view returns (address)",
         "function maxTicketsPerUser() external view returns (uint256)",
@@ -323,6 +344,7 @@ const RaffleList: React.FC = () => {
             maxTickets,
             ticketsSold,
             endTime,
+            startTime,
             isClosed,
             winner,
             maxTicketsPerUser,
@@ -334,6 +356,7 @@ const RaffleList: React.FC = () => {
             raffle.maxTickets(),
             raffle.totalTicketsSold(),
             raffle.endTime(),
+            raffle.startTime(),
             raffle.isClosed(),
             raffle.winner(),
             raffle.maxTicketsPerUser(),
@@ -349,6 +372,7 @@ const RaffleList: React.FC = () => {
             totalTickets: Number(maxTickets),
             ticketsSold: Number(ticketsSold),
             endTime: Number(endTime),
+            startTime: Number(startTime),
             isClosed,
             winner,
             maxTicketsPerUser: Number(maxTicketsPerUser),
@@ -383,7 +407,7 @@ const RaffleList: React.FC = () => {
       const countdownInterval = setInterval(() => {
         const newTimeRemaining: {[key: string]: any} = {};
         raffles.forEach(raffle => {
-          newTimeRemaining[raffle.address] = calculateTimeRemaining(raffle.endTime);
+          newTimeRemaining[raffle.address] = calculateTimeRemaining(raffle.startTime, raffle.endTime);
         });
         setTimeRemainingList(newTimeRemaining);
       }, 1000);
@@ -558,7 +582,10 @@ const RaffleList: React.FC = () => {
                     {!isExpired && (
                       <div className="mb-4">
                         <p className="text-xs flex gap-2 items-center font-rubik font-bold text-gray-600 uppercase mb-2 tracking-wide">
-                          <FcAlarmClock/> Time Remaining
+                          <FcAlarmClock/> 
+                          {timeRemaining?.notStarted ? 'Starts In' : 
+                           timeRemaining?.expired ? 'Ended' : 
+                           'Time Remaining'}
                         </p>
                         <div className="flex items-center justify-between gap-2">
                           {/* Hours */}
@@ -653,13 +680,18 @@ const RaffleList: React.FC = () => {
                     {/* Action Buttons */}
                     <div className="space-y-3">
                       {/* View Button */}
-                      <Link href={`/raffle/${raffle.address}`}>
+                      <Link href={timeRemaining?.notStarted ? '#' : `/raffle/${raffle.address}`}>
                         <Button
                           color="pharos-orange"
                           shape="medium-rounded"
-                          className="w-full flex items-center gap-2 justify-center text-lg py-3 px-6 uppercase"
+                          className={`w-full flex items-center gap-2 justify-center text-lg py-3 px-6 uppercase ${
+                            timeRemaining?.notStarted ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
+                          disabled={timeRemaining?.notStarted}
                         >
-                          {isExpired ? 'View Results' : 'Buy Tickets'} <FaArrowRight />
+                          {timeRemaining?.notStarted ? 'Not Started Yet' : 
+                           isExpired ? 'View Results' : 
+                           'Buy Tickets'} <FaArrowRight />
                         </Button>
                       </Link>
 
