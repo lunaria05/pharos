@@ -35,9 +35,14 @@ contract RaffleFactory {
         uint256 _ticketPrice,
         uint256 _maxTickets,
         uint256 _maxTicketsPerUser,
+        uint256 _startTime,
         uint256 _endTime,
         uint256 _houseFeePercentage
     ) external returns (address) {
+        // Validate timing
+        require(_startTime < _endTime, "Start time must be before end time");
+        require(_startTime > block.timestamp, "Start time must be in the future");
+        
         // Check if factory has enough ETH for funding
         require(address(this).balance >= fundingAmount, "Factory has insufficient ETH for raffle funding");
         require(entropyFeeReserve >= fundingAmount, "Insufficient ETH reserve for raffle funding");
@@ -52,6 +57,7 @@ contract RaffleFactory {
             _ticketPrice,
             _maxTickets,
             _maxTicketsPerUser,
+            _startTime,
             _endTime,
             _houseFeePercentage,
             msg.sender, // Admin is creator

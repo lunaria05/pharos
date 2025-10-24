@@ -25,7 +25,8 @@ contract Raffle is IEntropyConsumer, Ownable, ReentrancyGuard {
     uint256 public ticketPrice; // in PYUSD (with decimals)
     uint256 public maxTickets;
     uint256 public maxTicketsPerUser; // Per-user ticket limit to prevent 51% attacks
-    uint256 public endTime; // Unix timestamp
+    uint256 public startTime; // Unix timestamp when raffle starts
+    uint256 public endTime; // Unix timestamp when raffle ends
     uint256 public houseFeePercentage; // e.g., 300 for 3%
     mapping(address => uint256) public entrantTickets; // Tickets per user
     address[] public entrants; // List of unique entrants
@@ -39,7 +40,7 @@ contract Raffle is IEntropyConsumer, Ownable, ReentrancyGuard {
     bytes32 public userCommitment; // Stored for reference
     mapping(uint64 => bool) public pendingRequests;
 
-    event RaffleInitialized(uint256 ticketPrice, uint256 endTime);
+    event RaffleInitialized(uint256 ticketPrice, uint256 startTime, uint256 endTime);
     event TicketPurchased(address buyer, uint256 numTickets);
     event RaffleClosed(uint64 sequenceNumber);
     event WinnerSelected(address winner);
@@ -55,6 +56,7 @@ contract Raffle is IEntropyConsumer, Ownable, ReentrancyGuard {
         uint256 _ticketPrice,
         uint256 _maxTickets,
         uint256 _maxTicketsPerUser,
+        uint256 _startTime,
         uint256 _endTime,
         uint256 _houseFeePercentage,
         address _admin,
@@ -70,14 +72,16 @@ contract Raffle is IEntropyConsumer, Ownable, ReentrancyGuard {
         ticketPrice = _ticketPrice;
         maxTickets = _maxTickets;
         maxTicketsPerUser = _maxTicketsPerUser;
+        startTime = _startTime;
         endTime = _endTime;
         houseFeePercentage = _houseFeePercentage;
-        emit RaffleInitialized(_ticketPrice, _endTime);
+        emit RaffleInitialized(_ticketPrice, _startTime, _endTime);
     }
 
     // Buy tickets
     function buyTicket(uint256 numTickets) external nonReentrant {
         require(!isClosed, "Raffle closed");
+        require(block.timestamp >= startTime, "Raffle not started yet");
         require(block.timestamp < endTime, "Raffle ended");
         require(totalTicketsSold + numTickets <= maxTickets, "Max tickets exceeded");
         require(entrantTickets[msg.sender] + numTickets <= maxTicketsPerUser, "Max tickets per user exceeded");
@@ -100,6 +104,7 @@ contract Raffle is IEntropyConsumer, Ownable, ReentrancyGuard {
     // Close raffle and request randomness
     function closeRaffle(bytes32 _userCommitment) external onlyOwner {
         require(!isClosed, "Already closed");
+        require(block.timestamp >= startTime, "Raffle not started yet");
         require(block.timestamp >= endTime || totalTicketsSold >= maxTickets, "Not ready to close");
         require(totalTicketsSold > 0, "No entrants");
 
@@ -116,6 +121,7 @@ contract Raffle is IEntropyConsumer, Ownable, ReentrancyGuard {
     // Auto-close raffle when conditions are met (admin only)
     function closeIfReady() external onlyOwner {
         require(!isClosed, "Already closed");
+        require(block.timestamp >= startTime, "Raffle not started yet");
         require(block.timestamp >= endTime || totalTicketsSold >= maxTickets, "Not ready to close");
         require(totalTicketsSold > 0, "No entrants");
 
