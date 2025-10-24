@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { MdAdminPanelSettings, MdImage, MdUpload } from 'react-icons/md'
 import { AiOutlineLoading3Quarters } from 'react-icons/ai'
 import { ethers } from 'ethers'
+import { uploadImage } from '@/lib/imageUpload'
 
 // Contract addresses
 const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS as string;
@@ -19,6 +20,7 @@ const ADMIN_ADDRESSES = process.env.NEXT_PUBLIC_ADMIN_ADDRESSES
 interface RaffleFormData {
   image: File | null
   imagePreview: string
+  imageUrl: string // Pinata IPFS URL
   title: string
   description: string
   pricePerTicket: string
@@ -56,6 +58,7 @@ const AdminDashboard = () => {
   const [formData, setFormData] = useState<RaffleFormData>({
     image: null,
     imagePreview: '',
+    imageUrl: '',
     title: '',
     description: '',
     pricePerTicket: '',
@@ -86,7 +89,7 @@ const AdminDashboard = () => {
     setIsLoading(false)
   }, [authenticated, user])
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       // Reset error
@@ -96,14 +99,32 @@ const AdminDashboard = () => {
       const img = new window.Image()
       const objectUrl = URL.createObjectURL(file)
 
-      img.onload = () => {
+      img.onload = async () => {
         if (img.width === img.height) {
-          // Image is square, proceed
-          setFormData(prev => ({
-            ...prev,
-            image: file,
-            imagePreview: objectUrl
-          }))
+          // Image is square, proceed with upload to Pinata
+          try {
+            setFormData(prev => ({
+              ...prev,
+              image: file,
+              imagePreview: objectUrl
+            }))
+
+            // Upload to Pinata
+            const uploadResult = await uploadImage(file)
+            
+            if (uploadResult.success && uploadResult.url) {
+              setFormData(prev => ({
+                ...prev,
+                imageUrl: uploadResult.url!
+              }))
+              console.log('✅ Image uploaded to Pinata:', uploadResult.url)
+            } else {
+              setImageError(uploadResult.error || 'Failed to upload image')
+            }
+          } catch (error) {
+            console.error('Error uploading image:', error)
+            setImageError('Failed to upload image to Pinata')
+          }
         } else {
           // Image is not square
           setImageError(`Image must be square (1:1 aspect ratio). Current dimensions: ${img.width}x${img.height}`)
@@ -470,6 +491,49 @@ const AdminDashboard = () => {
   }
 
 
+  // Function to save raffle data to MongoDB
+  const saveRaffleToMongoDB = async (contractAddress: string, txHash: string) => {
+    try {
+      const raffleData = {
+        contractAddress,
+        title: formData.title,
+        description: formData.description,
+        imageUrl: formData.imageUrl,
+        pricePerTicket: formData.pricePerTicket,
+        totalTickets: parseInt(formData.availableTickets),
+        ticketsSold: 0,
+        startTime: Math.floor(new Date(`${formData.startDate}T${formData.startTime}`).getTime() / 1000),
+        endTime: Math.floor(new Date(`${formData.endDate}T${formData.endTime}`).getTime() / 1000),
+        isClosed: false,
+        maxTicketsPerUser: parseInt(formData.maxTicketsPerUser),
+        houseFeePercentage: parseInt(formData.houseFeePercentage),
+        prizeAmount: formData.totalPrizePool,
+        category: formData.category,
+        txHash,
+        createdBy: user?.wallet?.address || ''
+      }
+
+      const response = await fetch('/api/raffles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(raffleData),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to save raffle to database')
+      }
+
+      const result = await response.json()
+      console.log('✅ Raffle saved to MongoDB:', result)
+      return result
+    } catch (error) {
+      console.error('Error saving raffle to MongoDB:', error)
+      throw error
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -479,13 +543,22 @@ const AdminDashboard = () => {
       // Create raffle on blockchain
       const result = await createRaffleContract()
       
-      if (result.success) {
+      if (result.success && result.raffleAddress && result.txHash) {
         console.log('✅ Raffle created successfully!')
         console.log('Raffle Address:', result.raffleAddress)
         console.log('Transaction Hash:', result.txHash)
         
-        setRaffleAddress(result.raffleAddress || '')
-        setTxHash(result.txHash || '')
+        // Save to MongoDB
+        try {
+          await saveRaffleToMongoDB(result.raffleAddress, result.txHash)
+          console.log('✅ Raffle data saved to MongoDB')
+        } catch (dbError) {
+          console.error('⚠️ Failed to save to MongoDB, but blockchain transaction succeeded:', dbError)
+          // Don't fail the entire process if MongoDB fails
+        }
+        
+        setRaffleAddress(result.raffleAddress)
+        setTxHash(result.txHash)
         setShowSuccess(true)
         
         // Reset form after 5 seconds
@@ -493,6 +566,7 @@ const AdminDashboard = () => {
           setFormData({
             image: null,
             imagePreview: '',
+            imageUrl: '',
             title: '',
             description: '',
             pricePerTicket: '',
@@ -715,12 +789,17 @@ const AdminDashboard = () => {
                         <p className="text-green-800 font-bold text-sm text-center">
                           ✓ Square image uploaded successfully
                         </p>
+                        {formData.imageUrl && (
+                          <p className="text-green-700 text-xs text-center mt-1">
+                            📡 Stored on IPFS: {formData.imageUrl.slice(0, 50)}...
+                          </p>
+                        )}
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => {
-                        setFormData(prev => ({ ...prev, image: null, imagePreview: '' }))
+                        setFormData(prev => ({ ...prev, image: null, imagePreview: '', imageUrl: '' }))
                         setImageError('')
                       }}
                       className="mt-4 bg-red-500 border-4 border-black px-4 py-2 font-black text-white uppercase
