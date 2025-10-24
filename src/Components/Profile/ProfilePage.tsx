@@ -6,73 +6,205 @@ import Image from 'next/image'
 import user1 from "@/app/assets/Leaderboard/user1.svg"
 import { IoCopy } from 'react-icons/io5'
 import { MdVerified } from 'react-icons/md'
-import lottery from "@/app/assets/lottery.png"
-import shoes from "@/app/assets/shoes-jordan.png"
-import ticket from "@/app/assets/concert.png"
+import { AiOutlineLoading3Quarters } from 'react-icons/ai'
+import { ethers } from 'ethers'
 
-// Dummy data for raffles
-const dummyParticipatedRaffles = [
-  {
-    id: 1,
-    title: "Premium Sneakers Raffle",
-    image: shoes,
-    entryDate: "2025-10-15",
-    tickets: 5,
-    status: "ongoing",
-    prizeValue: "500 PYUSD"
-  },
-  {
-    id: 2,
-    title: "Concert Tickets Giveaway",
-    image:ticket,
-    entryDate: "2025-10-10",
-    tickets: 3,
-    status: "ended",
-    prizeValue: "300 PYUSD"
-  },
-  {
-    id: 3,
-    title: "Luxury Watch Raffle",
-    image: lottery,
-    entryDate: "2025-10-08",
-    tickets: 2,
-    status: "ongoing",
-    prizeValue: "1000 PYUSD"
-  }
-]
+// Contract addresses
+const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS || "0xa35c500A2F835a28ecd1590E7b3B8a801c151272";
+const PYUSD_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_PYUSD_TOKEN_ADDRESS || "0x79Bd6F9E7B7B25B343C762AE5a35b20353b2CCb8";
 
-const dummyWonRaffles = [
-  {
-    id: 101,
-    title: "Limited Edition Jordans",
-    image: shoes,
-    wonDate: "2025-10-12",
-    prizeValue: "600 PYUSD",
-    claimStatus: "claimed"
-  },
-  {
-    id: 102,
-    title: "PYUSD Prize Pool",
-    image: lottery,
-    wonDate: "2025-10-05",
-    prizeValue: "250 PYUSD",
-    claimStatus: "claimed"
-  }
-]
+// Interface for user raffle participation
+interface UserRaffleParticipation {
+  address: string;
+  title: string;
+  image: string;
+  entryDate: string;
+  tickets: number;
+  status: 'ongoing' | 'ended' | 'closed';
+  prizeValue: string;
+  isWinner: boolean;
+  prizeClaimed?: boolean;
+  endTime: number;
+}
 
 const ProfilePage = () => {
   const { authenticated, user, login } = usePrivy()
   const router = useRouter()
   const [copySuccess, setCopySuccess] = useState(false)
   const [showWalletModal, setShowWalletModal] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [participatedRaffles, setParticipatedRaffles] = useState<UserRaffleParticipation[]>([])
+  const [wonRaffles, setWonRaffles] = useState<UserRaffleParticipation[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!authenticated) {
       setShowWalletModal(true)
     } else {
       setShowWalletModal(false)
+      if (user?.wallet?.address) {
+        fetchUserRaffleData()
+      }
     }
-  }, [authenticated])
+  }, [authenticated, user])
+
+  const getProvider = () => {
+    if (typeof window !== 'undefined' && window.ethereum) {
+      return new ethers.BrowserProvider(window.ethereum);
+    }
+    throw new Error('MetaMask not found');
+  };
+
+  const fetchUserRaffleData = async () => {
+    if (!user?.wallet?.address) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const provider = getProvider();
+      const userAddress = user.wallet.address.toLowerCase();
+      
+      // RaffleFactory ABI
+      const factoryAbi = [
+        "function getRaffles() external view returns (address[] memory)"
+      ];
+      
+      // Raffle ABI
+      const raffleAbi = [
+        "function prizeDescription() external view returns (string memory)",
+        "function ticketPrice() external view returns (uint256)",
+        "function maxTickets() external view returns (uint256)",
+        "function totalTicketsSold() external view returns (uint256)",
+        "function endTime() external view returns (uint256)",
+        "function isClosed() external view returns (bool)",
+        "function winner() external view returns (address)",
+        "function maxTicketsPerUser() external view returns (uint256)",
+        "function houseFeePercentage() external view returns (uint256)",
+        "function prizeAmount() external view returns (uint256)",
+        "function entrantTickets(address) external view returns (uint256)",
+        "function prizeClaimed() external view returns (bool)"
+      ];
+      
+      const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi, provider);
+      
+      // Get all raffle addresses
+      const raffleAddresses = await factory.getRaffles();
+      console.log('Found raffles:', raffleAddresses.length);
+      
+      const userParticipations: UserRaffleParticipation[] = [];
+      const userWins: UserRaffleParticipation[] = [];
+      
+      // Check each raffle for user participation
+      for (const raffleAddress of raffleAddresses) {
+        try {
+          console.log(`Checking raffle: ${raffleAddress}`);
+          const raffleContract = new ethers.Contract(raffleAddress, raffleAbi, provider);
+          
+          // Get user's ticket count with better error handling
+          let userTickets = 0;
+          try {
+            userTickets = await raffleContract.entrantTickets(userAddress);
+            console.log(`User tickets in ${raffleAddress}: ${userTickets}`);
+          } catch (ticketError) {
+            console.log(`No tickets found for user in ${raffleAddress}:`, ticketError);
+            continue; // Skip this raffle if we can't get ticket data
+          }
+          
+          // Always process raffles for debugging, even with 0 tickets
+          if (userTickets >= 0) {
+            // User participated in this raffle
+            const [
+              title,
+              ticketPrice,
+              maxTickets,
+              ticketsSold,
+              endTime,
+              isClosed,
+              winner,
+              prizeAmount,
+              prizeClaimed
+            ] = await Promise.all([
+              raffleContract.prizeDescription().catch(() => "Unknown Prize"),
+              raffleContract.ticketPrice().catch(() => 0),
+              raffleContract.maxTickets().catch(() => 0),
+              raffleContract.totalTicketsSold().catch(() => 0),
+              raffleContract.endTime().catch(() => 0),
+              raffleContract.isClosed().catch(() => false),
+              raffleContract.winner().catch(() => "0x0000000000000000000000000000000000000000"),
+              raffleContract.prizeAmount().catch(() => 0),
+              raffleContract.prizeClaimed().catch(() => false)
+            ]);
+            
+            const currentTime = Math.floor(Date.now() / 1000);
+            const hasEnded = currentTime >= Number(endTime);
+            const isWinner = winner.toLowerCase() === userAddress;
+            
+            console.log(`Raffle ${raffleAddress} data:`, {
+              title,
+              userTickets,
+              isWinner,
+              hasEnded,
+              isClosed,
+              winner
+            });
+            
+            // Determine status
+            let status: 'ongoing' | 'ended' | 'closed' = 'ongoing';
+            if (isClosed) {
+              status = 'closed';
+            } else if (hasEnded) {
+              status = 'ended';
+            }
+            
+            const participation: UserRaffleParticipation = {
+              address: raffleAddress,
+              title,
+              image: '/api/placeholder/300/200', // Default placeholder
+              entryDate: new Date().toISOString().split('T')[0], // Current date as placeholder
+              tickets: Number(userTickets),
+              status,
+              prizeValue: `${ethers.formatEther(prizeAmount)} PYUSD`,
+              isWinner,
+              prizeClaimed: isWinner ? prizeClaimed : undefined,
+              endTime: Number(endTime)
+            };
+            
+            // Only add to participated raffles if user has tickets
+            if (userTickets > 0) {
+              userParticipations.push(participation);
+            }
+            
+            if (isWinner) {
+              userWins.push(participation);
+            }
+          }
+        } catch (raffleError) {
+          console.error(`Error fetching raffle ${raffleAddress}:`, raffleError);
+        }
+      }
+      
+      // Sort by end time (most recent first)
+      userParticipations.sort((a, b) => b.endTime - a.endTime);
+      userWins.sort((a, b) => b.endTime - a.endTime);
+      
+      console.log('Final data:', {
+        participatedRaffles: userParticipations.length,
+        wonRaffles: userWins.length,
+        participatedData: userParticipations,
+        wonData: userWins
+      });
+      
+      setParticipatedRaffles(userParticipations);
+      setWonRaffles(userWins);
+      
+    } catch (error) {
+      console.error('Error fetching user raffle data:', error);
+      setError('Failed to load raffle data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleCopyAddress = async () => {
     if (user?.wallet?.address) {
@@ -187,16 +319,16 @@ const ProfilePage = () => {
               {/* Stats */}
               <div className="grid grid-cols-3 gap-4 mt-6">
                 <div className="bg-[#f489a3] border-4 border-black p-4 shadow-[4px_4px_0px_#000]">
-                  <div className="text-3xl font-black">{dummyParticipatedRaffles.length}</div>
+                  <div className="text-3xl font-black">{participatedRaffles.length}</div>
                   <div className="text-sm font-bold uppercase">Participated</div>
                 </div>
                 <div className="bg-[#f0bb0d] border-4 border-black p-4 shadow-[4px_4px_0px_#000]">
-                  <div className="text-3xl font-black">{dummyWonRaffles.length}</div>
+                  <div className="text-3xl font-black">{wonRaffles.length}</div>
                   <div className="text-sm font-bold uppercase">Won</div>
                 </div>
                 <div className="bg-[#8b5cf6] border-4 border-black p-4 shadow-[4px_4px_0px_#000]">
                   <div className="text-3xl font-black text-white">
-                    {dummyParticipatedRaffles.reduce((sum, r) => sum + r.tickets, 0)}
+                    {participatedRaffles.reduce((sum, r) => sum + r.tickets, 0)}
                   </div>
                   <div className="text-sm font-bold uppercase text-white">Total Tickets</div>
                 </div>
@@ -213,29 +345,50 @@ const ProfilePage = () => {
             </span>
           </h2>
 
-          {dummyWonRaffles.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-12">
+              <AiOutlineLoading3Quarters className="animate-spin text-4xl mx-auto mb-4 text-[#f97028]" />
+              <p className="text-xl font-bold">Loading your wins...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12 text-red-500">
+              <p className="text-xl font-bold">Error loading data</p>
+              <p className="mt-2">{error}</p>
+              <button
+                onClick={fetchUserRaffleData}
+                className="mt-4 bg-[#f97028] border-4 border-black px-6 py-2 font-black text-white uppercase tracking-tight
+                  shadow-[4px_4px_0px_#000] hover:shadow-[2px_2px_0px_#000]
+                  hover:translate-x-[2px] hover:translate-y-[2px]
+                  active:shadow-none active:translate-x-[4px] active:translate-y-[4px]
+                  transition-all duration-100"
+              >
+                Retry
+              </button>
+            </div>
+          ) : wonRaffles.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <p className="text-xl font-bold">No raffles won yet</p>
               <p className="mt-2">Keep participating to win prizes!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {dummyWonRaffles.map((raffle) => (
+              {wonRaffles.map((raffle, index) => (
                 <div
-                  key={raffle.id}
+                  key={raffle.address}
                   className="bg-gradient-to-br from-pink-50 to-purple-50 border-4 border-black shadow-[6px_6px_0px_#000] hover:shadow-[4px_4px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-100"
                 >
                   <div className="p-4">
-                    {/* <div className="bg-white border-2 border-black h-40 mb-4 flex items-center justify-center">
-                      <span className="text-gray-400 text-sm">Image Placeholder</span>
-                    </div> */}
-                    <Image src={raffle.image} alt="" className='bg-white border-2 border-black h-52 object-cover mb-4'/>
+                    <div className="bg-white border-2 border-black h-52 mb-4 flex items-center justify-center">
+                      <span className="text-gray-400 text-sm">Prize Image</span>
+                    </div>
                     <h3 className="font-black text-lg mb-2 uppercase">{raffle.title}</h3>
                     <div className="space-y-1 text-sm">
-                      <p className="font-bold">Won: {raffle.wonDate}</p>
+                      <p className="font-bold">Won: {new Date(raffle.endTime * 1000).toLocaleDateString()}</p>
                       <p className="font-bold text-[#f97028]">Prize: {raffle.prizeValue}</p>
-                      <span className="inline-block bg-green-500 text-white px-3 py-1 border-2 border-black font-bold uppercase text-xs">
-                        {raffle.claimStatus}
+                      <span className={`inline-block text-white px-3 py-1 border-2 border-black font-bold uppercase text-xs ${
+                        raffle.prizeClaimed ? 'bg-green-500' : 'bg-yellow-500'
+                      }`}>
+                        {raffle.prizeClaimed ? 'claimed' : 'pending'}
                       </span>
                     </div>
                   </div>
@@ -253,35 +406,63 @@ const ProfilePage = () => {
             </span>
           </h2>
 
-          {dummyParticipatedRaffles.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-12">
+              <AiOutlineLoading3Quarters className="animate-spin text-4xl mx-auto mb-4 text-[#f97028]" />
+              <p className="text-xl font-bold">Loading your participation...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12 text-red-500">
+              <p className="text-xl font-bold">Error loading data</p>
+              <p className="mt-2">{error}</p>
+              <button
+                onClick={fetchUserRaffleData}
+                className="mt-4 bg-[#f97028] border-4 border-black px-6 py-2 font-black text-white uppercase tracking-tight
+                  shadow-[4px_4px_0px_#000] hover:shadow-[2px_2px_0px_#000]
+                  hover:translate-x-[2px] hover:translate-y-[2px]
+                  active:shadow-none active:translate-x-[4px] active:translate-y-[4px]
+                  transition-all duration-100"
+              >
+                Retry
+              </button>
+            </div>
+          ) : participatedRaffles.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <p className="text-xl font-bold">No raffles participated yet</p>
               <p className="mt-2">Start participating in raffles now!</p>
+              <p className="mt-2 text-sm">Debug: Found {participatedRaffles.length} participated raffles</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {dummyParticipatedRaffles.map((raffle) => (
+              {participatedRaffles.map((raffle, index) => (
                 <div
-                  key={raffle.id}
+                  key={raffle.address}
                   className="bg-gradient-to-br from-pink-50 to-purple-50 border-4 border-black shadow-[6px_6px_0px_#000] hover:shadow-[4px_4px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-100"
                 >
                   <div className="p-4">
-                    {/* <div className="bg-white border-2 border-black h-40 mb-4 flex items-center justify-center">
-                      <span className="text-gray-400 text-sm">Image Placeholder</span>
-                    </div> */}
-                    <Image src={raffle.image} alt="" className='bg-white border-2 border-black h-52 object-cover mb-4'/>
+                    <div className="bg-white border-2 border-black h-52 mb-4 flex items-center justify-center">
+                      <span className="text-gray-400 text-sm">Raffle Image</span>
+                    </div>
                     <h3 className="font-black text-lg mb-2 uppercase">{raffle.title}</h3>
                     <div className="space-y-1 text-sm">
                       <p className="font-bold">Entered: {raffle.entryDate}</p>
                       <p className="font-bold">Tickets: {raffle.tickets}</p>
                       <p className="font-bold text-[#f97028]">Prize: {raffle.prizeValue}</p>
-                      <span
-                        className={`inline-block text-white px-3 py-1 border-2 border-black font-bold uppercase text-xs ${
-                          raffle.status === 'ongoing' ? 'bg-blue-500' : 'bg-gray-500'
-                        }`}
-                      >
-                        {raffle.status}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-block text-white px-3 py-1 border-2 border-black font-bold uppercase text-xs ${
+                            raffle.status === 'ongoing' ? 'bg-blue-500' : 
+                            raffle.status === 'ended' ? 'bg-yellow-500' : 'bg-gray-500'
+                          }`}
+                        >
+                          {raffle.status}
+                        </span>
+                        {raffle.isWinner && (
+                          <span className="inline-block bg-green-500 text-white px-3 py-1 border-2 border-black font-bold uppercase text-xs">
+                            🏆 Winner!
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
