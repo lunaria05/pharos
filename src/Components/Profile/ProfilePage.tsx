@@ -18,6 +18,7 @@ interface UserRaffleParticipation {
   address: string;
   title: string;
   image: string;
+  imageUrl?: string; // Add MongoDB image URL field
   entryDate: string;
   tickets: number;
   status: 'ongoing' | 'ended' | 'closed';
@@ -92,6 +93,31 @@ const ProfilePage = () => {
       const raffleAddresses = await factory.getRaffles();
       console.log('Found raffles:', raffleAddresses.length);
       
+      // Try to get images from MongoDB
+      let imageMap = new Map();
+      try {
+        console.log('🖼️ Fetching images from MongoDB...');
+        const response = await fetch('/api/raffles');
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data.success && data.raffles) {
+            console.log('📊 Found MongoDB raffles:', data.raffles.length);
+            
+            // Create a map of contract addresses to image URLs
+            data.raffles.forEach((raffle: any) => {
+              if (raffle.contractAddress && raffle.imageUrl) {
+                imageMap.set(raffle.contractAddress.toLowerCase(), raffle.imageUrl);
+                console.log(`🖼️ Found image for ${raffle.contractAddress}: ${raffle.imageUrl}`);
+              }
+            });
+          }
+        }
+      } catch (mongoError) {
+        console.log('⚠️ Could not fetch images from MongoDB:', mongoError);
+      }
+      
       const userParticipations: UserRaffleParticipation[] = [];
       const userWins: UserRaffleParticipation[] = [];
       
@@ -157,10 +183,17 @@ const ProfilePage = () => {
               status = 'ended';
             }
             
+            // Get image URL from MongoDB if available
+            const imageUrl = imageMap.get(raffleAddress.toLowerCase());
+            if (imageUrl) {
+              console.log(`✅ Found image for raffle ${raffleAddress}: ${imageUrl}`);
+            }
+            
             const participation: UserRaffleParticipation = {
               address: raffleAddress,
               title,
               image: '/api/placeholder/300/200', // Default placeholder
+              imageUrl: imageUrl || undefined, // MongoDB image URL
               entryDate: new Date().toISOString().split('T')[0], // Current date as placeholder
               tickets: Number(userTickets),
               status,
@@ -378,8 +411,37 @@ const ProfilePage = () => {
                   className="bg-gradient-to-br from-pink-50 to-purple-50 border-4 border-black shadow-[6px_6px_0px_#000] hover:shadow-[4px_4px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-100"
                 >
                   <div className="p-4">
-                    <div className="bg-white border-2 border-black h-52 mb-4 flex items-center justify-center">
-                      <span className="text-gray-400 text-sm">Prize Image</span>
+                    <div className="bg-white border-2 border-black h-52 mb-4 flex items-center justify-center relative overflow-hidden">
+                      {raffle.imageUrl ? (
+                        <Image
+                          src={raffle.imageUrl}
+                          alt={raffle.title}
+                          fill
+                          className="object-cover"
+                          onError={(e) => {
+                            console.log('Image failed to load:', raffle.imageUrl);
+                            // Hide the image and show emoji fallback
+                            e.currentTarget.style.display = 'none';
+                            const emojiFallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (emojiFallback) {
+                              emojiFallback.style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      
+                      {/* Emoji fallback (always present, shown when no imageUrl or image fails) */}
+                      <div 
+                        className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-yellow-100 to-orange-100 ${
+                          raffle.imageUrl ? 'absolute inset-0 hidden' : ''
+                        }`}
+                      >
+                        <div className="text-center">
+                          <div className="text-6xl mb-2">🏆</div>
+                          <p className="text-sm font-bold text-gray-600">Prize</p>
+                        </div>
+                      </div>
+                 
                     </div>
                     <h3 className="font-black text-lg mb-2 uppercase">{raffle.title}</h3>
                     <div className="space-y-1 text-sm">
@@ -440,8 +502,37 @@ const ProfilePage = () => {
                   className="bg-gradient-to-br from-pink-50 to-purple-50 border-4 border-black shadow-[6px_6px_0px_#000] hover:shadow-[4px_4px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-100"
                 >
                   <div className="p-4">
-                    <div className="bg-white border-2 border-black h-52 mb-4 flex items-center justify-center">
-                      <span className="text-gray-400 text-sm">Raffle Image</span>
+                    <div className="bg-white border-2 border-black h-52 mb-4 flex items-center justify-center relative overflow-hidden">
+                      {raffle.imageUrl ? (
+                        <Image
+                          src={raffle.imageUrl}
+                          alt={raffle.title}
+                          fill
+                          className="object-cover"
+                          onError={(e) => {
+                            console.log('Image failed to load:', raffle.imageUrl);
+                            // Hide the image and show emoji fallback
+                            e.currentTarget.style.display = 'none';
+                            const emojiFallback = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (emojiFallback) {
+                              emojiFallback.style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      
+                      {/* Emoji fallback (always present, shown when no imageUrl or image fails) */}
+                      <div 
+                        className={`w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 ${
+                          raffle.imageUrl ? 'absolute inset-0 hidden' : ''
+                        }`}
+                      >
+                        <div className="text-center">
+                          <div className="text-6xl mb-2">🎫</div>
+                          <p className="text-sm font-bold text-gray-600">Raffle</p>
+                        </div>
+                      </div>
+
                     </div>
                     <h3 className="font-black text-lg mb-2 uppercase">{raffle.title}</h3>
                     <div className="space-y-1 text-sm">
@@ -449,14 +540,14 @@ const ProfilePage = () => {
                       <p className="font-bold">Tickets: {raffle.tickets}</p>
                       <p className="font-bold text-[#f97028]">Prize: {raffle.prizeValue}</p>
                       <div className="flex items-center gap-2">
-                        <span
-                          className={`inline-block text-white px-3 py-1 border-2 border-black font-bold uppercase text-xs ${
+                      <span
+                        className={`inline-block text-white px-3 py-1 border-2 border-black font-bold uppercase text-xs ${
                             raffle.status === 'ongoing' ? 'bg-blue-500' : 
                             raffle.status === 'ended' ? 'bg-yellow-500' : 'bg-gray-500'
-                          }`}
-                        >
-                          {raffle.status}
-                        </span>
+                        }`}
+                      >
+                        {raffle.status}
+                      </span>
                         {raffle.isWinner && (
                           <span className="inline-block bg-green-500 text-white px-3 py-1 border-2 border-black font-bold uppercase text-xs">
                             🏆 Winner!

@@ -33,6 +33,7 @@ interface RaffleData {
   maxTicketsPerUser: number;
   houseFeePercentage: number;
   prizeAmount: string;
+  imageUrl?: string; // Add image URL field
 }
 
 const RaffleList: React.FC = () => {
@@ -297,12 +298,67 @@ const RaffleList: React.FC = () => {
     }
   };
 
-  // Fetch raffles from smart contract
+  // Fetch raffles from smart contracts and merge images from MongoDB
   const fetchRaffles = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
+      console.log('🔄 Fetching raffles from smart contracts...');
+      
+      // Always fetch from smart contracts for real-time data
+      const rafflesData = await fetchRafflesFromSmartContract();
+      
+      // Try to get images from MongoDB
+      try {
+        console.log('🖼️ Fetching images from MongoDB...');
+        const response = await fetch('/api/raffles');
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data.success && data.raffles) {
+            console.log('📊 Found MongoDB raffles:', data.raffles.length);
+            
+            // Create a map of contract addresses to image URLs
+            const imageMap = new Map();
+            data.raffles.forEach((raffle: any) => {
+              if (raffle.contractAddress && raffle.imageUrl) {
+                imageMap.set(raffle.contractAddress.toLowerCase(), raffle.imageUrl);
+                console.log(`🖼️ Found image for ${raffle.contractAddress}: ${raffle.imageUrl}`);
+              }
+            });
+            
+            // Merge images into raffle data
+            const rafflesWithImages = rafflesData.map(raffle => ({
+              ...raffle,
+              imageUrl: imageMap.get(raffle.address.toLowerCase()) || undefined
+            }));
+            
+            setRaffles(rafflesWithImages);
+            console.log('✅ Loaded raffles with images:', rafflesWithImages.length);
+            return;
+          }
+        }
+      } catch (mongoError) {
+        console.log('⚠️ Could not fetch images from MongoDB:', mongoError);
+      }
+      
+      // If MongoDB fails, just use smart contract data without images
+      setRaffles(rafflesData);
+      console.log('✅ Loaded raffles from smart contracts only:', rafflesData.length);
+      
+    } catch (error: any) {
+      console.error('Error fetching raffles:', error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fallback: Fetch raffles from smart contracts
+  const fetchRafflesFromSmartContract = async () => {
+    try {
       const provider = getProvider();
       
       // RaffleFactory ABI
@@ -329,13 +385,14 @@ const RaffleList: React.FC = () => {
       
       // Get all raffle addresses
       const raffleAddresses = await factory.getRaffles();
-      console.log('Found raffles:', raffleAddresses.length);
+      console.log('Found raffles from smart contract:', raffleAddresses.length);
       
       const rafflesData: RaffleData[] = [];
       
       // Fetch data for each raffle
       for (const address of raffleAddresses) {
         try {
+          console.log(`Fetching data for raffle: ${address}`);
           const raffle = new ethers.Contract(address, raffleAbi, provider);
           
           const [
@@ -351,18 +408,25 @@ const RaffleList: React.FC = () => {
             houseFeePercentage,
             prizeAmount
           ] = await Promise.all([
-            raffle.prizeDescription(),
-            raffle.ticketPrice(),
-            raffle.maxTickets(),
-            raffle.totalTicketsSold(),
-            raffle.endTime(),
-            raffle.startTime(),
-            raffle.isClosed(),
-            raffle.winner(),
-            raffle.maxTicketsPerUser(),
-            raffle.houseFeePercentage(),
-            raffle.prizeAmount()
+            raffle.prizeDescription().catch(() => 'Unknown Prize'),
+            raffle.ticketPrice().catch(() => 0),
+            raffle.maxTickets().catch(() => 0),
+            raffle.totalTicketsSold().catch(() => 0),
+            raffle.endTime().catch(() => 0),
+            raffle.startTime().catch(() => 0),
+            raffle.isClosed().catch(() => false),
+            raffle.winner().catch(() => '0x0000000000000000000000000000000000000000'),
+            raffle.maxTicketsPerUser().catch(() => 0),
+            raffle.houseFeePercentage().catch(() => 0),
+            raffle.prizeAmount().catch(() => 0)
           ]);
+          
+          console.log(`✅ Successfully fetched raffle ${address}:`, {
+            title,
+            ticketsSold: Number(ticketsSold),
+            totalTickets: Number(maxTickets),
+            isClosed
+          });
           
           rafflesData.push({
             address,
@@ -377,21 +441,37 @@ const RaffleList: React.FC = () => {
             winner,
             maxTicketsPerUser: Number(maxTicketsPerUser),
             houseFeePercentage: Number(houseFeePercentage),
-            prizeAmount: ethers.formatEther(prizeAmount)
+            prizeAmount: ethers.formatEther(prizeAmount),
+            imageUrl: undefined // No image URL from smart contract
           });
         } catch (error) {
-          console.error(`Error fetching raffle ${address}:`, error);
+          console.error(`❌ Error fetching raffle ${address}:`, error);
+          // Still add the raffle with minimal data so it shows up
+          rafflesData.push({
+            address,
+            title: 'Unknown Raffle',
+            description: 'Unknown Raffle',
+            pricePerTicket: '0',
+            totalTickets: 0,
+            ticketsSold: 0,
+            endTime: 0,
+            startTime: 0,
+            isClosed: false,
+            winner: '0x0000000000000000000000000000000000000000',
+            maxTicketsPerUser: 0,
+            houseFeePercentage: 0,
+            prizeAmount: '0',
+            imageUrl: undefined
+          });
         }
       }
       
-      setRaffles(rafflesData);
-      console.log('Loaded raffles:', rafflesData.length);
+      console.log('✅ Loaded raffles from smart contract:', rafflesData.length);
+      return rafflesData;
       
     } catch (error: any) {
-      console.error('Error fetching raffles:', error);
-      setError(error.message);
-    } finally {
-      setIsLoading(false);
+      console.error('Error fetching raffles from smart contract:', error);
+      throw error;
     }
   };
 
@@ -544,11 +624,36 @@ const RaffleList: React.FC = () => {
                       <span className="w-3 h-3 bg-green-500 rounded-full border-2 border-gray-700"></span>
                     </div>
 
-                    {/* Placeholder Image */}
-                    <div className="relative w-full h-full pt-8 flex items-center justify-center bg-gradient-to-br from-pharos-orange/20 to-pharos-yellow/20">
-                      <div className="text-center">
-                        <div className="text-6xl mb-4">🎫</div>
-                        <p className="text-lg font-rubik font-black text-gray-700">PYUSD Raffle</p>
+                    {/* Raffle Image */}
+                    <div className="relative w-full h-full pt-8">
+                      {raffle.imageUrl ? (
+                        <Image
+                          src={raffle.imageUrl}
+                          alt={raffle.title}
+                          fill
+                          className="object-cover"
+                          onError={(e) => {
+                            console.log('Image failed to load:', raffle.imageUrl);
+                            // Hide the image and show placeholder
+                            e.currentTarget.style.display = 'none';
+                            const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (placeholder) {
+                              placeholder.style.display = 'flex';
+                            }
+                          }}
+                        />
+                      ) : null}
+                      
+                      {/* Placeholder Image (always present, shown when no imageUrl or image fails) */}
+                      <div 
+                        className={`relative w-full h-full flex items-center justify-center bg-gradient-to-br from-pharos-orange/20 to-pharos-yellow/20 ${
+                          raffle.imageUrl ? 'absolute inset-0 hidden' : ''
+                        }`}
+                      >
+                        <div className="text-center">
+                          <div className="text-6xl mb-4">🎫</div>
+                          <p className="text-lg font-rubik font-black text-gray-700">PYUSD Raffle</p>
+                        </div>
                       </div>
                     </div>
 

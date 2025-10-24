@@ -29,6 +29,7 @@ interface RaffleData {
   houseFeePercentage: number;
   prizeAmount: string;
   participants: number;
+  imageUrl?: string; // Add image URL field
 }
 
 interface IndividualRaffleProps {
@@ -89,11 +90,13 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
     throw new Error('MetaMask not found');
   };
 
-  // Fetch raffle data from smart contract
+  // Fetch raffle data from smart contract and merge images from MongoDB
   const fetchRaffleData = async () => {
     try {
       setIsLoading(true);
       setError(null);
+      
+      console.log('🔄 Fetching raffle data from smart contract...');
       
       const provider = getProvider();
       
@@ -154,11 +157,38 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
         maxTicketsPerUser: Number(maxTicketsPerUser),
         houseFeePercentage: Number(houseFeePercentage),
         prizeAmount: ethers.formatEther(prizeAmount),
-        participants: Number(entrantsLength)
+        participants: Number(entrantsLength),
+        imageUrl: undefined // Will be updated from MongoDB if available
       };
       
+      // Try to get image from MongoDB
+      try {
+        console.log('🖼️ Fetching image from MongoDB...');
+        const response = await fetch('/api/raffles');
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data.success && data.raffles) {
+            // Find the raffle with matching contract address
+            const matchingRaffle = data.raffles.find((r: any) => 
+              r.contractAddress.toLowerCase() === raffleAddress.toLowerCase()
+            );
+            
+            if (matchingRaffle && matchingRaffle.imageUrl) {
+              raffleData.imageUrl = matchingRaffle.imageUrl;
+              console.log('✅ Found image for raffle:', matchingRaffle.imageUrl);
+            } else {
+              console.log('ℹ️ No image found in MongoDB for this raffle');
+            }
+          }
+        }
+      } catch (mongoError) {
+        console.log('⚠️ Could not fetch image from MongoDB:', mongoError);
+      }
+      
       setRaffle(raffleData);
-      console.log('Loaded raffle data:', raffleData);
+      console.log('✅ Loaded raffle data:', raffleData);
       
     } catch (error: unknown) {
       console.error('Error fetching raffle data:', error);
@@ -404,12 +434,37 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
                   <div className="flex-1 bg-white border-2 border-gray-400 rounded-md h-6 ml-4"></div>
                 </div>
 
-                {/* Placeholder Image */}
-                <div className="relative w-full h-full pt-10 flex items-center justify-center bg-gradient-to-br from-pharos-orange/20 to-pharos-yellow/20">
-                  <div className="text-center">
-                    <div className="text-8xl mb-4">🎫</div>
-                    <p className="text-2xl font-rubik font-black text-gray-700">PYUSD Raffle</p>
-                    <p className="text-lg font-rubik font-bold text-gray-600 mt-2">{raffle.title}</p>
+                {/* Raffle Image */}
+                <div className="relative w-full h-full pt-10">
+                  {raffle.imageUrl ? (
+                    <Image
+                      src={raffle.imageUrl}
+                      alt={raffle.title}
+                      fill
+                      className="object-cover"
+                      onError={(e) => {
+                        console.log('Image failed to load:', raffle.imageUrl);
+                        // Hide the image and show placeholder
+                        e.currentTarget.style.display = 'none';
+                        const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                        if (placeholder) {
+                          placeholder.style.display = 'flex';
+                        }
+                      }}
+                    />
+                  ) : null}
+                  
+                  {/* Placeholder Image (always present, shown when no imageUrl or image fails) */}
+                  <div 
+                    className={`relative w-full h-full flex items-center justify-center bg-gradient-to-br from-pharos-orange/20 to-pharos-yellow/20 ${
+                      raffle.imageUrl ? 'absolute inset-0 hidden' : ''
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="text-8xl mb-4">🎫</div>
+                      <p className="text-2xl font-rubik font-black text-gray-700">PYUSD Raffle</p>
+                      <p className="text-lg font-rubik font-bold text-gray-600 mt-2">{raffle.title}</p>
+                    </div>
                   </div>
                 </div>
 
