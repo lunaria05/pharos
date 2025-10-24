@@ -6,7 +6,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 async function main() {
-  const FACTORY_ADDRESS = process.env.FACTORY_ADDRESS as string; // Update with your factory address
+  const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS as string; // Update with your factory address
   const DEPOSIT_AMOUNT = ethers.parseEther("0.1"); // Deposit 0.1 ETH for entropy fees
   
   // Get the contract artifact
