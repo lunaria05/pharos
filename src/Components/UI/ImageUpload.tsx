@@ -2,6 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { uploadImage, validateImageDimensions } from '@/lib/imageUpload';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
+import Image from 'next/image';
 
 interface ImageUploadProps {
   onImageUploaded: (url: string) => void;
@@ -107,7 +108,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           </div>
         ) : preview ? (
           <div className="relative">
-            <img
+            <Image
               src={preview}
               alt="Preview"
               className="w-full h-48 object-cover rounded-lg border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,0.8)]"

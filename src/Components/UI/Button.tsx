@@ -25,7 +25,6 @@ const Button: React.FC<ButtonProps> = ({
   const baseStyles = 'font-bold uppercase tracking-wide transition-all duration-200 ease-in-out';
 
   // --- Determine actual hex codes based on color prop ---
-  let currentBgColor: string;
   let currentHoverBgColor: string;
   let currentAccentColor: string; // This will be the main color for this button
 

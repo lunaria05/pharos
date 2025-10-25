@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ethers } from 'ethers';
+import { ethers, Log } from 'ethers';
 import Button from '@/Components/UI/Button';
 import pyusd from "@/app/assets/pyusd.png";
 import { FaArrowRight } from 'react-icons/fa6';
@@ -13,9 +13,24 @@ import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS || "0x6b18bf9DecF780c12cd8a218488696C3c1D1A93B";
 
 // Admin wallet addresses from environment variables
-const ADMIN_ADDRESSES = process.env.NEXT_PUBLIC_ADMIN_ADDRESSES 
+const ADMIN_ADDRESSES = process.env.NEXT_PUBLIC_ADMIN_ADDRESSES
   ? process.env.NEXT_PUBLIC_ADMIN_ADDRESSES.split(',').map(addr => addr.trim())
   : [];
+
+// Time remaining interface
+interface TimeRemaining {
+  hours: string;
+  minutes: string;
+  seconds: string;
+  expired: boolean;
+  notStarted: boolean;
+}
+
+// MongoDB raffle interface
+interface MongoRaffle {
+  contractAddress: string;
+  imageUrl: string;
+}
 
 // Raffle interface
 interface RaffleData {
@@ -37,7 +52,7 @@ interface RaffleData {
 
 const RaffleList: React.FC = () => {
   const [raffles, setRaffles] = useState<RaffleData[]>([]);
-  const [timeRemainingList, setTimeRemainingList] = useState<{[key: string]: any}>({});
+  const [timeRemainingList, setTimeRemainingList] = useState<{[key: string]: TimeRemaining}>({});
   const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,12 +138,12 @@ const RaffleList: React.FC = () => {
         setIsAdmin(isContractAdmin);
       } catch (contractError) {
         // If contract doesn't have isAdmin function, fall back to env check only
-        console.log('Contract admin check not available, using env check only');
+        console.log('Contract admin check not available, using env check only', contractError);
         setIsAdmin(false);
       }
       
     } catch (error) {
-      console.log('Not connected to MetaMask or not admin');
+      console.log('Not connected to MetaMask or not admin', error);
       setIsAdmin(false);
     }
   };
@@ -181,7 +196,7 @@ const RaffleList: React.FC = () => {
       if (receipt?.logs && receipt.logs.length > 0) {
         // Look for the RaffleClosed event
         const raffleClosedTopic = ethers.id("RaffleClosed(uint64)");
-        const raffleClosedLog = receipt.logs.find((log: any) => log.topics[0] === raffleClosedTopic);
+        const raffleClosedLog = receipt.logs.find((log: Log) => log.topics[0] === raffleClosedTopic);
         
         if (raffleClosedLog) {
           // Decode the event data using the correct ABI
@@ -324,10 +339,10 @@ const RaffleList: React.FC = () => {
           
           if (data.success && data.raffles) {
             console.log('📊 Found MongoDB raffles:', data.raffles.length);
-            
+
             // Create a map of contract addresses to image URLs
-            const imageMap = new Map();
-            data.raffles.forEach((raffle: any) => {
+            const imageMap = new Map<string, string>();
+            data.raffles.forEach((raffle: MongoRaffle) => {
               if (raffle.contractAddress && raffle.imageUrl) {
                 imageMap.set(raffle.contractAddress.toLowerCase(), raffle.imageUrl);
                 console.log(`🖼️ Found image for ${raffle.contractAddress}: ${raffle.imageUrl}`);
@@ -352,10 +367,11 @@ const RaffleList: React.FC = () => {
       // If MongoDB fails, just use smart contract data without images
       setRaffles(rafflesData);
       console.log('✅ Loaded raffles from smart contracts only:', rafflesData.length);
-      
-    } catch (error: any) {
+
+    } catch (error) {
       console.error('Error fetching raffles:', error);
-      setError(error.message);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch raffles';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -501,8 +517,8 @@ const RaffleList: React.FC = () => {
       
       console.log('✅ Loaded raffles from smart contract:', rafflesData.length);
       return rafflesData;
-      
-    } catch (error: any) {
+
+    } catch (error) {
       console.error('Error fetching raffles from smart contract:', error);
       throw error;
     }
@@ -518,7 +534,7 @@ const RaffleList: React.FC = () => {
     if (raffles.length > 0) {
       // Update countdown every second
       const countdownInterval = setInterval(() => {
-        const newTimeRemaining: {[key: string]: any} = {};
+        const newTimeRemaining: {[key: string]: TimeRemaining} = {};
         raffles.forEach(raffle => {
           newTimeRemaining[raffle.address] = calculateTimeRemaining(raffle.startTime, raffle.endTime);
         });

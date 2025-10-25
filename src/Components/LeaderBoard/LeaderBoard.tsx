@@ -1,9 +1,9 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion, Variants } from 'framer-motion';
-import { FaTrophy, FaMedal, FaTicketAlt, FaFire, FaArrowRight } from 'react-icons/fa';
+import { FaTrophy, FaMedal, FaTicketAlt, FaArrowRight } from 'react-icons/fa';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
-import Image from 'next/image';
+import Image, { StaticImageData } from 'next/image';
 import Link from 'next/link';
 
 import { ethers } from 'ethers';
@@ -19,7 +19,7 @@ interface LeaderboardUser {
   id: string;
   name?: string;
   address: string;
-  profileImage: any; // StaticImageData
+  profileImage: StaticImageData; // StaticImageData
   rafflesJoined: number;
   rafflesWon: number;
   totalSpent: string; // In PYUSD
@@ -260,19 +260,19 @@ const LeaderBoard = () => {
     },
   };
 
-  const getRankColor = (rank: number) => {
-    if (rank === 1) return '#f3a20f'; // Gold - pharos yellow
-    if (rank === 2) return '#94a3b8'; // Silver
-    if (rank === 3) return '#cd7f32'; // Bronze
-    return '#f97028'; // pharos orange for others
-  };
+  // const getRankColor = (rank: number) => {
+  //   if (rank === 1) return '#f3a20f'; // Gold - pharos yellow
+  //   if (rank === 2) return '#94a3b8'; // Silver
+  //   if (rank === 3) return '#cd7f32'; // Bronze
+  //   return '#f97028'; // pharos orange for others
+  // };
 
-  const getRankIcon = (rank: number) => {
-    if (rank === 1) return <FaTrophy className="text-2xl" />;
-    if (rank === 2) return <FaMedal className="text-2xl" />;
-    if (rank === 3) return <FaMedal className="text-2xl" />;
-    return <span className="text-xl font-black">#{rank}</span>;
-  };
+  // const getRankIcon = (rank: number) => {
+  //   if (rank === 1) return <FaTrophy className="text-2xl" />;
+  //   if (rank === 2) return <FaMedal className="text-2xl" />;
+  //   if (rank === 3) return <FaMedal className="text-2xl" />;
+  //   return <span className="text-xl font-black">#{rank}</span>;
+  // };
 
   const getDisplayName = (user: LeaderboardUser) => {
     return user.name || user.address;
@@ -482,7 +482,7 @@ const LeaderBoard = () => {
                 initial="hidden"
                 animate={mounted ? 'visible' : 'hidden'}
               >
-                {leaderboardUsers.map((user, index) => (
+                {leaderboardUsers.map((user) => (
                   <motion.div
                     key={user.id}
                     variants={itemVariants}

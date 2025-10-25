@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import Button from '@/Components/UI/Button';
 import logo from "@/app/assets/logo-p.png"
-import { TbCopy, TbLogout } from 'react-icons/tb';
+import { TbLogout } from 'react-icons/tb';
 import { IoCopy, IoMenu } from 'react-icons/io5';
 import { FaWallet } from 'react-icons/fa';
 import { FaUser } from 'react-icons/fa';
@@ -32,7 +32,7 @@ const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isWalletMenuOpen, setIsWalletMenuOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  // const [isAdmin, setIsAdmin] = useState(false);
   const [menuItems, setMenuItems] = useState(baseMenuItems);
 
   const { login, logout, authenticated, user } = usePrivy();
@@ -44,7 +44,7 @@ const Navbar: React.FC = () => {
       const isUserAdmin = ADMIN_ADDRESSES.some(
         addr => addr.toLowerCase() === userAddress
       );
-      setIsAdmin(isUserAdmin);
+      // setIsAdmin(isUserAdmin);
 
       // Update menu items based on admin status
       if (isUserAdmin) {
@@ -53,7 +53,7 @@ const Navbar: React.FC = () => {
         setMenuItems(baseMenuItems);
       }
     } else {
-      setIsAdmin(false);
+      // setIsAdmin(false);
       setMenuItems(baseMenuItems);
     }
   }, [authenticated, user]);

@@ -14,6 +14,17 @@ import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 // Contract addresses
 const PYUSD_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_PYUSD_TOKEN_ADDRESS || "0x79Bd6F9E7B7B25B343C762AE5a35b20353b2CCb8";
 
+// MongoDB raffle interface
+interface MongoRaffle {
+  contractAddress: string;
+  imageUrl: string;
+}
+
+// Error with code property
+interface EthereumError extends Error {
+  code?: number | string;
+}
+
 // Raffle interface
 interface RaffleData {
   address: string;
@@ -52,7 +63,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
   const [isBuyingTickets, setIsBuyingTickets] = useState(false);
   const [buyTicketsError, setBuyTicketsError] = useState<string | null>(null);
   const [buyTicketsSuccess, setBuyTicketsSuccess] = useState<string | null>(null);
-  const [currentNetwork, setCurrentNetwork] = useState<string | null>(null);
+  // const [currentNetwork, setCurrentNetwork] = useState<string | null>(null);
 
   // Calculate time remaining for a raffle
   const calculateTimeRemaining = (endTime: number) => {
@@ -104,9 +115,10 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: '0x66eee' }], // 421614 in hex
       });
-    } catch (switchError: any) {
+    } catch (switchError) {
+      const error = switchError as EthereumError;
       // If the network doesn't exist, add it
-      if (switchError.code === 4902) {
+      if (error.code === 4902) {
         try {
           await window.ethereum.request({
             method: 'wallet_addEthereumChain',
@@ -123,6 +135,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
             }],
           });
         } catch (addError) {
+          console.log(addError,"error");
           throw new Error('Failed to add Arbitrum Sepolia network');
         }
       } else {
@@ -212,7 +225,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
           
           if (data.success && data.raffles) {
             // Find the raffle with matching contract address
-            const matchingRaffle = data.raffles.find((r: any) => 
+            const matchingRaffle = data.raffles.find((r: MongoRaffle) =>
               r.contractAddress.toLowerCase() === raffleAddress.toLowerCase()
             );
             
@@ -367,7 +380,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
       if (typeof window !== 'undefined' && window.ethereum) {
         const provider = new ethers.BrowserProvider(window.ethereum);
         const network = await provider.getNetwork();
-        setCurrentNetwork(`${network.name} (Chain ID: ${network.chainId})`);
+        // setCurrentNetwork(`${network.name} (Chain ID: ${network.chainId})`);
       }
     } catch (error) {
       console.log('Could not check network:', error);

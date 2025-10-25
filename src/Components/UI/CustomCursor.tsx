@@ -1,9 +1,6 @@
 "use client"
 import React, { useEffect, useState } from 'react'
 import { IoPaperPlane } from 'react-icons/io5'
-import { FaHandPaper, FaHandPointer, FaHandRock } from 'react-icons/fa'
-import { IoHandLeft } from 'react-icons/io5'
-import { BsFillHandIndexThumbFill } from 'react-icons/bs'
 import { TbHandFinger, TbHandGrab } from 'react-icons/tb'
 
 type CursorState = 'default' | 'pointer' | 'clicking'

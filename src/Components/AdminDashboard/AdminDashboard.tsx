@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { MdAdminPanelSettings, MdImage, MdUpload } from 'react-icons/md'
 import { AiOutlineLoading3Quarters } from 'react-icons/ai'
-import { ethers } from 'ethers'
+import { ethers, Log } from 'ethers'
 import { uploadImage } from '@/lib/imageUpload'
 
 // Contract addresses
@@ -45,15 +45,7 @@ const AdminDashboard = () => {
   const [imageError, setImageError] = useState('')
   const [raffleAddress, setRaffleAddress] = useState('')
   const [txHash, setTxHash] = useState('')
-  const [isClosingRaffle, setIsClosingRaffle] = useState(false)
-  const [closeRaffleError, setCloseRaffleError] = useState<string | null>(null)
-  const [closeRaffleSuccess, setCloseRaffleSuccess] = useState<string | null>(null)
-  const [raffleToClose, setRaffleToClose] = useState('')
   const [createRaffleError, setCreateRaffleError] = useState<string | null>(null)
-  const [isDistributing, setIsDistributing] = useState(false)
-  const [distributeError, setDistributeError] = useState<string | null>(null)
-  const [distributeSuccess, setDistributeSuccess] = useState<string | null>(null)
-  const [raffleToDistribute, setRaffleToDistribute] = useState('')
 
   const [formData, setFormData] = useState<RaffleFormData>({
     image: null,
@@ -194,7 +186,7 @@ const AdminDashboard = () => {
         const entropyReserve = await factory.getEntropyFeeReserve()
         console.log('Entropy Fee Reserve:', ethers.formatEther(entropyReserve), 'ETH')
       } catch (e) {
-        console.log('getEntropyFeeReserve not available in current factory')
+        console.log('getEntropyFeeReserve not available in current factory',e)
       }
       
       // Convert form data to contract parameters
@@ -274,7 +266,7 @@ const AdminDashboard = () => {
       let raffleAddress = null
       if (receipt?.logs && receipt.logs.length > 0) {
         const eventTopic = ethers.id("RaffleCreated(address,string,uint256)")
-        const raffleCreatedLog = receipt.logs.find((log: any) => log.topics[0] === eventTopic)
+        const raffleCreatedLog = receipt.logs.find((log: Log) => log.topics[0] === eventTopic)
 
         if (raffleCreatedLog) {
           const iface = new ethers.Interface([
@@ -308,12 +300,13 @@ const AdminDashboard = () => {
           console.log('Could not get raffle address from getRaffles():', error)
         }
       }
-      
+
       return { success: true, raffleAddress, txHash: tx.hash }
-      
-    } catch (error: any) {
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       console.error('Error creating raffle:', error)
-      return { success: false, error: error.message }
+      return { success: false, error: errorMessage }
     }
   }
 
@@ -344,7 +337,7 @@ const AdminDashboard = () => {
         requiredFee = await entropy.getFee(checksummedProvider)
         console.log('Required entropy fee:', ethers.formatEther(requiredFee), 'ETH')
       } catch (error) {
-        console.log('Could not get entropy fee, using default:', ethers.formatEther(requiredFee), 'ETH')
+        console.log('Could not get entropy fee, using default:', ethers.formatEther(requiredFee), 'ETH',error)
       }
       
       // Check if funding is needed (add small buffer for safety)
@@ -396,108 +389,110 @@ const AdminDashboard = () => {
         console.log('Raffle already has sufficient ETH')
         return { funded: false, amount: '0' }
       }
-      
-    } catch (error: any) {
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       console.error('Error funding raffle:', error)
-      throw new Error(`Failed to fund raffle: ${error.message}`)
+      throw new Error(`Failed to fund raffle: ${errorMessage}`)
     }
   }
 
   // Function to close raffle with automatic funding
-  const closeRaffleWithFunding = async (raffleAddress: string) => {
-    try {
-      console.log('🔒 Starting raffle closure process...')
+  // const closeRaffleWithFunding = async (raffleAddress: string) => {
+  //   try {
+  //     console.log('🔒 Starting raffle closure process...')
       
-      // Step 1: Check and fund if needed
-      console.log('💰 Checking ETH balance and funding if needed...')
-      const fundingResult = await checkAndFundRaffle(raffleAddress)
+  //     // Step 1: Check and fund if needed
+  //     console.log('💰 Checking ETH balance and funding if needed...')
+  //     const fundingResult = await checkAndFundRaffle(raffleAddress)
       
-      if (fundingResult.funded) {
-        console.log(`✅ Funded raffle with ${fundingResult.amount} ETH`)
-      }
+  //     if (fundingResult.funded) {
+  //       console.log(`✅ Funded raffle with ${fundingResult.amount} ETH`)
+  //     }
       
-      // Step 2: Close the raffle using auto-close function
-      console.log('🔒 Auto-closing raffle...')
-      const provider = getProvider()
-      const signer = await provider.getSigner()
+  //     // Step 2: Close the raffle using auto-close function
+  //     console.log('🔒 Auto-closing raffle...')
+  //     const provider = getProvider()
+  //     const signer = await provider.getSigner()
       
-      // Use direct RPC for reading contract data
-      const readProvider = getReadOnlyProvider()
+  //     // Use direct RPC for reading contract data
+  //     const readProvider = getReadOnlyProvider()
       
-      const raffleAbi = [
-        "function closeIfReady() external",
-        "function owner() external view returns (address)"
-      ]
+  //     const raffleAbi = [
+  //       "function closeIfReady() external",
+  //       "function owner() external view returns (address)"
+  //     ]
       
-      const raffleRead = new ethers.Contract(raffleAddress, raffleAbi, readProvider)
-      const raffleWrite = new ethers.Contract(raffleAddress, raffleAbi, signer)
+  //     const raffleRead = new ethers.Contract(raffleAddress, raffleAbi, readProvider)
+  //     const raffleWrite = new ethers.Contract(raffleAddress, raffleAbi, signer)
       
-      // Check if user is the owner (required for admin-only close) using read provider
-      const owner = await raffleRead.owner()
-      const userAddress = await signer.getAddress()
+  //     // Check if user is the owner (required for admin-only close) using read provider
+  //     const owner = await raffleRead.owner()
+  //     const userAddress = await signer.getAddress()
       
-      if (owner.toLowerCase() !== userAddress.toLowerCase()) {
-        throw new Error('Only the raffle owner can close this raffle')
-      }
+  //     if (owner.toLowerCase() !== userAddress.toLowerCase()) {
+  //       throw new Error('Only the raffle owner can close this raffle')
+  //     }
       
-      console.log('Auto-closing raffle...')
+  //     console.log('Auto-closing raffle...')
       
-      const tx = await raffleWrite.closeIfReady()
-      console.log('Close transaction hash:', tx.hash)
+  //     const tx = await raffleWrite.closeIfReady()
+  //     console.log('Close transaction hash:', tx.hash)
       
-      const receipt = await tx.wait()
+  //     const receipt = await tx.wait()
       
-      console.log('Close transaction receipt:', {
-        status: receipt?.status,
-        logsCount: receipt?.logs?.length || 0,
-        gasUsed: receipt?.gasUsed?.toString()
-      })
+  //     console.log('Close transaction receipt:', {
+  //       status: receipt?.status,
+  //       logsCount: receipt?.logs?.length || 0,
+  //       gasUsed: receipt?.gasUsed?.toString()
+  //     })
       
-      // Try to find the RaffleClosed event
-      let sequenceNumber = null
-      if (receipt?.logs && receipt.logs.length > 0) {
-        const raffleClosedTopic = ethers.id("RaffleClosed(uint64)")
-        const raffleClosedLog = receipt.logs.find((log: any) => log.topics[0] === raffleClosedTopic)
+  //     // Try to find the RaffleClosed event
+  //     let sequenceNumber = null
+  //     if (receipt?.logs && receipt.logs.length > 0) {
+  //       const raffleClosedTopic = ethers.id("RaffleClosed(uint64)")
+  //       const raffleClosedLog = receipt.logs.find((log: Log) => log.topics[0] === raffleClosedTopic)
         
-        if (raffleClosedLog) {
-          // Decode the event data using the correct ABI
-          const eventAbi = ["event RaffleClosed(uint64 sequenceNumber)"]
-          const iface = new ethers.Interface(eventAbi)
-          try {
-            const decoded = iface.parseLog({
-              topics: raffleClosedLog.topics,
-              data: raffleClosedLog.data
-            })
-            sequenceNumber = decoded?.args?.[0]
-          } catch (e) {
-            console.log('Failed to parse RaffleClosed event:', e)
-            // Fallback: extract from topics directly
-            if (raffleClosedLog.topics.length > 1) {
-              sequenceNumber = BigInt(raffleClosedLog.topics[1])
-            }
-          }
-        }
-      }
+  //       if (raffleClosedLog) {
+  //         // Decode the event data using the correct ABI
+  //         const eventAbi = ["event RaffleClosed(uint64 sequenceNumber)"]
+  //         const iface = new ethers.Interface(eventAbi)
+  //         try {
+  //           const decoded = iface.parseLog({
+  //             topics: raffleClosedLog.topics,
+  //             data: raffleClosedLog.data
+  //           })
+  //           sequenceNumber = decoded?.args?.[0]
+  //         } catch (e) {
+  //           console.log('Failed to parse RaffleClosed event:', e)
+  //           // Fallback: extract from topics directly
+  //           if (raffleClosedLog.topics.length > 1) {
+  //             sequenceNumber = BigInt(raffleClosedLog.topics[1])
+  //           }
+  //         }
+  //       }
+  //     }
       
-      if (sequenceNumber) {
-        console.log('✅ Raffle closed successfully!')
-        console.log('📊 Sequence number:', sequenceNumber)
+  //     if (sequenceNumber) {
+  //       console.log('✅ Raffle closed successfully!')
+  //       console.log('📊 Sequence number:', sequenceNumber)
         
-        return { 
-          success: true, 
-          sequenceNumber: sequenceNumber.toString(),
-          funded: fundingResult.funded,
-          fundingAmount: fundingResult.amount
-        }
-      } else {
-        throw new Error('Could not find sequence number in transaction logs')
-      }
-      
-    } catch (error: any) {
-      console.error('Error closing raffle:', error)
-      throw new Error(`Failed to close raffle: ${error.message}`)
-    }
-  }
+  //       return { 
+  //         success: true, 
+  //         sequenceNumber: sequenceNumber.toString(),
+  //         funded: fundingResult.funded,
+  //         fundingAmount: fundingResult.amount
+  //       }
+  //     } else {
+  //       throw new Error('Could not find sequence number in transaction logs')
+  //     }
+
+  //   } catch (error) {
+  //     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+  //     console.error('Error closing raffle:', error)
+  //     throw new Error(`Failed to close raffle: ${errorMessage}`)
+  //   }
+  // }
 
 
   // Function to save raffle data to MongoDB
@@ -594,15 +589,16 @@ const AdminDashboard = () => {
           setTxHash('')
         }, 5000)
       } else {
-        setCreateRaffleError(result.error)
+        setCreateRaffleError(result.error || 'Unknown error occurred')
         // Clear error after 10 seconds
         setTimeout(() => {
           setCreateRaffleError(null)
         }, 10000)
       }
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred'
       console.error('Error:', error)
-      setCreateRaffleError(error.message)
+      setCreateRaffleError(errorMessage)
       // Clear error after 10 seconds
       setTimeout(() => {
         setCreateRaffleError(null)

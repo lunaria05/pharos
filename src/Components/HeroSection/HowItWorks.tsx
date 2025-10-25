@@ -1,7 +1,6 @@
 "use client"
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import Button from '@/Components/UI/Button';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import pyth from "@/app/assets/HowItWorks/pyth.png"
 import community from "@/app/assets/HowItWorks/community.png"
@@ -9,10 +8,8 @@ import reward from "@/app/assets/HowItWorks/reward.png"
 
 const HowItWorks = () => {
   const [activeStep, setActiveStep] = useState(0);
-  const [allContentVisible, setAllContentVisible] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const lastSectionRef = useRef<HTMLDivElement>(null);
 
   const steps = [
     {

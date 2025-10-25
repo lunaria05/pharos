@@ -1,7 +1,7 @@
 "use client"
 import React, { useEffect, useState } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
-import { useRouter } from 'next/navigation'
+// import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import user1 from "@/app/assets/Leaderboard/user1.svg"
 import { IoCopy } from 'react-icons/io5'
@@ -11,7 +11,13 @@ import { ethers } from 'ethers'
 
 // Contract addresses
 const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS || "0xa35c500A2F835a28ecd1590E7b3B8a801c151272";
-const PYUSD_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_PYUSD_TOKEN_ADDRESS || "0x79Bd6F9E7B7B25B343C762AE5a35b20353b2CCb8";
+// const PYUSD_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_PYUSD_TOKEN_ADDRESS || "0x79Bd6F9E7B7B25B343C762AE5a35b20353b2CCb8";
+
+// MongoDB raffle interface
+interface MongoRaffle {
+  contractAddress: string;
+  imageUrl: string;
+}
 
 // Interface for user raffle participation
 interface UserRaffleParticipation {
@@ -30,7 +36,7 @@ interface UserRaffleParticipation {
 
 const ProfilePage = () => {
   const { authenticated, user, login } = usePrivy()
-  const router = useRouter()
+  // const router = useRouter()
   const [copySuccess, setCopySuccess] = useState(false)
   const [showWalletModal, setShowWalletModal] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -114,19 +120,19 @@ const ProfilePage = () => {
       }
       
       // Try to get images from MongoDB
-      let imageMap = new Map();
+      const imageMap = new Map<string, string>();
       try {
         console.log('🖼️ Fetching images from MongoDB...');
         const response = await fetch('/api/raffles');
-        
+
         if (response.ok) {
           const data = await response.json();
-          
+
           if (data.success && data.raffles) {
             console.log('📊 Found MongoDB raffles:', data.raffles.length);
-            
+
             // Create a map of contract addresses to image URLs
-            data.raffles.forEach((raffle: any) => {
+            data.raffles.forEach((raffle: MongoRaffle) => {
               if (raffle.contractAddress && raffle.imageUrl) {
                 imageMap.set(raffle.contractAddress.toLowerCase(), raffle.imageUrl);
                 console.log(`🖼️ Found image for ${raffle.contractAddress}: ${raffle.imageUrl}`);
@@ -162,9 +168,9 @@ const ProfilePage = () => {
             // User participated in this raffle
             const [
               title,
-              ticketPrice,
-              maxTickets,
-              ticketsSold,
+              // ticketPrice,
+              // maxTickets,
+              // ticketsSold,
               endTime,
               isClosed,
               winner,
@@ -425,7 +431,7 @@ const ProfilePage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {wonRaffles.map((raffle, index) => (
+              {wonRaffles.map((raffle) => (
                 <div
                   key={raffle.address}
                   className="bg-gradient-to-br from-pink-50 to-purple-50 border-4 border-black shadow-[6px_6px_0px_#000] hover:shadow-[4px_4px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-100"
@@ -516,7 +522,7 @@ const ProfilePage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {participatedRaffles.map((raffle, index) => (
+              {participatedRaffles.map((raffle) => (
                 <div
                   key={raffle.address}
                   className="bg-gradient-to-br from-pink-50 to-purple-50 border-4 border-black shadow-[6px_6px_0px_#000] hover:shadow-[4px_4px_0px_#000] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-100"
