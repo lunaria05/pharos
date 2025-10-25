@@ -307,7 +307,7 @@ const RaffleList: React.FC = () => {
       console.log('🔄 Fetching raffles from smart contracts...');
       
       // Always fetch from smart contracts for real-time data
-      const rafflesData = await fetchRafflesFromSmartContract();
+      const rafflesData = await fetchRafflesFromSmartContract() || [];
       
       // Try to get images from MongoDB
       try {
@@ -383,9 +383,30 @@ const RaffleList: React.FC = () => {
       
       const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi, provider);
       
-      // Get all raffle addresses
-      const raffleAddresses = await factory.getRaffles();
-      console.log('Found raffles from smart contract:', raffleAddresses.length);
+      // Get all raffle addresses with better error handling
+      let raffleAddresses: string[] = [];
+      try {
+        raffleAddresses = await factory.getRaffles();
+        console.log('Found raffles from smart contract:', raffleAddresses.length);
+      } catch (error) {
+        console.error('Error calling getRaffles():', error);
+        
+        // Check if it's a decoding error (empty result)
+        if (error instanceof Error && error.message.includes('could not decode result data') && error.message.includes('value="0x"')) {
+          console.log('ℹ️ Factory contract returned empty data - no raffles exist yet');
+          raffleAddresses = []; // Empty array
+        } else {
+          throw error; // Re-throw other errors
+        }
+      }
+      
+      // If no raffles, return empty list
+      if (raffleAddresses.length === 0) {
+        console.log('No raffles found, returning empty raffle list');
+        setRaffles([]);
+        setIsLoading(false);
+        return;
+      }
       
       const rafflesData: RaffleData[] = [];
       

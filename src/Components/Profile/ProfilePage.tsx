@@ -89,9 +89,31 @@ const ProfilePage = () => {
       
       const factory = new ethers.Contract(FACTORY_ADDRESS, factoryAbi, provider);
       
-      // Get all raffle addresses
-      const raffleAddresses = await factory.getRaffles();
-      console.log('Found raffles:', raffleAddresses.length);
+      // Get all raffle addresses with better error handling
+      let raffleAddresses: string[] = [];
+      try {
+        raffleAddresses = await factory.getRaffles();
+        console.log('Found raffles:', raffleAddresses.length);
+      } catch (error) {
+        console.error('Error calling getRaffles():', error);
+        
+        // Check if it's a decoding error (empty result)
+        if (error instanceof Error && error.message.includes('could not decode result data') && error.message.includes('value="0x"')) {
+          console.log('ℹ️ Factory contract returned empty data - no raffles exist yet');
+          raffleAddresses = []; // Empty array
+        } else {
+          throw error; // Re-throw other errors
+        }
+      }
+      
+      // If no raffles, return empty data
+      if (raffleAddresses.length === 0) {
+        console.log('No raffles found, returning empty user data');
+        setParticipatedRaffles([]);
+        setWonRaffles([]);
+        setIsLoading(false);
+        return;
+      }
       
       // Try to get images from MongoDB
       let imageMap = new Map();
