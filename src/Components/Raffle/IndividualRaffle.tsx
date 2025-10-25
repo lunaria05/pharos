@@ -82,8 +82,14 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
     };
   };
 
-  // Get provider for MetaMask
+  // Get provider - always use direct RPC to ensure we're on the correct network
   const getProvider = () => {
+    // Always use direct RPC to ensure we're on the correct network
+    return new ethers.JsonRpcProvider('https://sepolia-rollup.arbitrum.io/rpc');
+  };
+
+  // Get provider for MetaMask (for transactions only)
+  const getMetaMaskProvider = () => {
     if (typeof window !== 'undefined' && window.ethereum) {
       return new ethers.BrowserProvider(window.ethereum);
     }
@@ -207,7 +213,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
       setBuyTicketsError(null);
       setBuyTicketsSuccess(null);
       
-      const provider = getProvider();
+      const provider = getMetaMaskProvider();
       const signer = await provider.getSigner();
       
       // Raffle ABI for buying tickets
