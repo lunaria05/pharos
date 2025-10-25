@@ -9,7 +9,7 @@ import { ethers } from 'ethers'
 import { uploadImage } from '@/lib/imageUpload'
 
 // Contract addresses
-const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS as string;
+const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS || "0x6b18bf9DecF780c12cd8a218488696C3c1D1A93B";
 const PYUSD_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_PYUSD_TOKEN_ADDRESS as string;
 
 // Admin wallet addresses from environment variables

@@ -10,8 +10,7 @@ import { FcAlarmClock } from 'react-icons/fc';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 
 // Contract addresses
-const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS || "";
-const PYUSD_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_PYUSD_TOKEN_ADDRESS || "";
+const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS || "0x6b18bf9DecF780c12cd8a218488696C3c1D1A93B";
 
 // Admin wallet addresses from environment variables
 const ADMIN_ADDRESSES = process.env.NEXT_PUBLIC_ADMIN_ADDRESSES 
@@ -90,12 +89,10 @@ const RaffleList: React.FC = () => {
     };
   };
 
-  // Get provider for MetaMask
+  // Get provider - always use direct RPC for now to avoid network issues
   const getProvider = () => {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      return new ethers.BrowserProvider(window.ethereum);
-    }
-    throw new Error('MetaMask not found');
+    // Always use direct RPC to ensure we're on the correct network
+    return new ethers.JsonRpcProvider('https://sepolia-rollup.arbitrum.io/rpc');
   };
 
   // Check if current user is admin
@@ -386,6 +383,12 @@ const RaffleList: React.FC = () => {
       // Get all raffle addresses with better error handling
       let raffleAddresses: string[] = [];
       try {
+        // First check if contract exists
+        const code = await provider.getCode(FACTORY_ADDRESS);
+        if (code === '0x') {
+          throw new Error(`No contract deployed at address ${FACTORY_ADDRESS}`);
+        }
+        
         raffleAddresses = await factory.getRaffles();
         console.log('Found raffles from smart contract:', raffleAddresses.length);
       } catch (error) {
@@ -393,7 +396,8 @@ const RaffleList: React.FC = () => {
         
         // Check if it's a decoding error (empty result)
         if (error instanceof Error && error.message.includes('could not decode result data') && error.message.includes('value="0x"')) {
-          console.log('ℹ️ Factory contract returned empty data - no raffles exist yet');
+          console.log('ℹ️ Factory contract returned empty data - this might be a network/RPC issue');
+          console.log('ℹ️ Try switching MetaMask to Arbitrum Sepolia network or refresh the page');
           raffleAddresses = []; // Empty array
         } else {
           throw error; // Re-throw other errors

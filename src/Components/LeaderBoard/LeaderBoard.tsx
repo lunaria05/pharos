@@ -12,7 +12,7 @@ import user2 from "@/app/assets/Leaderboard/user2.svg";
 import user3 from "@/app/assets/Leaderboard/user3.svg";
 
 // Contract addresses
-const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS as string;
+const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS || "0x6b18bf9DecF780c12cd8a218488696C3c1D1A93B";
 console.log(FACTORY_ADDRESS);
 // Interface for real leaderboard user
 interface LeaderboardUser {
