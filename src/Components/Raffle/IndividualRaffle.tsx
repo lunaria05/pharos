@@ -12,7 +12,7 @@ import { IoTicketSharp } from 'react-icons/io5';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 
 // Contract addresses
-const PYUSD_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_PYUSD_TOKEN_ADDRESS as string;
+const PYUSD_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_PYUSD_TOKEN_ADDRESS || "0x79Bd6F9E7B7B25B343C762AE5a35b20353b2CCb8";
 
 // Raffle interface
 interface RaffleData {
@@ -52,6 +52,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
   const [isBuyingTickets, setIsBuyingTickets] = useState(false);
   const [buyTicketsError, setBuyTicketsError] = useState<string | null>(null);
   const [buyTicketsSuccess, setBuyTicketsSuccess] = useState<string | null>(null);
+  const [currentNetwork, setCurrentNetwork] = useState<string | null>(null);
 
   // Calculate time remaining for a raffle
   const calculateTimeRemaining = (endTime: number) => {
@@ -94,6 +95,40 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
       return new ethers.BrowserProvider(window.ethereum);
     }
     throw new Error('MetaMask not found');
+  };
+
+  // Switch to Arbitrum Sepolia network
+  const switchToArbitrumSepolia = async () => {
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x66eee' }], // 421614 in hex
+      });
+    } catch (switchError: any) {
+      // If the network doesn't exist, add it
+      if (switchError.code === 4902) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x66eee', // 421614 in hex
+              chainName: 'Arbitrum Sepolia',
+              rpcUrls: ['https://sepolia-rollup.arbitrum.io/rpc'],
+              nativeCurrency: {
+                name: 'ETH',
+                symbol: 'ETH',
+                decimals: 18,
+              },
+              blockExplorerUrls: ['https://sepolia.arbiscan.io/'],
+            }],
+          });
+        } catch (addError) {
+          throw new Error('Failed to add Arbitrum Sepolia network');
+        }
+      } else {
+        throw new Error('Failed to switch to Arbitrum Sepolia network');
+      }
+    }
   };
 
   // Fetch raffle data from smart contract and merge images from MongoDB
@@ -216,6 +251,27 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
       const provider = getMetaMaskProvider();
       const signer = await provider.getSigner();
       
+      // Check if user is on the correct network (Arbitrum Sepolia)
+      const network = await provider.getNetwork();
+      console.log('Current network:', network);
+      
+      if (network.chainId !== BigInt(421614)) {
+        console.log('🔄 Wrong network detected, attempting to switch...');
+        await switchToArbitrumSepolia();
+        
+        // Check network again after switching
+        const newNetwork = await provider.getNetwork();
+        if (newNetwork.chainId !== BigInt(421614)) {
+          throw new Error(`Please switch to Arbitrum Sepolia (Chain ID: 421614). Current network: ${newNetwork.name} (Chain ID: ${newNetwork.chainId})`);
+        }
+        console.log('✅ Successfully switched to Arbitrum Sepolia');
+      }
+      
+      console.log('✅ Connected to correct network: Arbitrum Sepolia');
+      
+      // Use direct RPC for reading contract data to avoid network issues
+      const readProvider = getProvider();
+      
       // Raffle ABI for buying tickets
       const raffleAbi = [
         "function buyTicket(uint256 numTickets) external",
@@ -233,39 +289,42 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
         "function approve(address spender, uint256 amount) returns (bool)"
       ];
       
-      const raffleContract = new ethers.Contract(raffle.address, raffleAbi, signer);
-      const pyusdToken = new ethers.Contract(PYUSD_TOKEN_ADDRESS, erc20Abi, signer);
+      // Use readProvider for reading data, signer for transactions
+      const raffleContractRead = new ethers.Contract(raffle.address, raffleAbi, readProvider);
+      const raffleContractWrite = new ethers.Contract(raffle.address, raffleAbi, signer);
+      const pyusdTokenRead = new ethers.Contract(PYUSD_TOKEN_ADDRESS, erc20Abi, readProvider);
+      const pyusdTokenWrite = new ethers.Contract(PYUSD_TOKEN_ADDRESS, erc20Abi, signer);
       
-      // Get ticket price and calculate total cost
-      const ticketPrice = await raffleContract.ticketPrice();
+      // Get ticket price and calculate total cost using read provider
+      const ticketPrice = await raffleContractRead.ticketPrice();
       const totalCost = ticketPrice * BigInt(numTickets);
       
       console.log(`🎫 Buying ${numTickets} tickets...`);
       console.log(`💰 Cost: ${ethers.formatEther(totalCost)} PYUSD per ticket`);
       console.log(`💵 Total Cost: ${ethers.formatEther(totalCost)} PYUSD`);
       
-      // Check PYUSD balance
-      const balance = await pyusdToken.balanceOf(signer.address);
+      // Check PYUSD balance using read provider
+      const balance = await pyusdTokenRead.balanceOf(signer.address);
       console.log(`💳 Your PYUSD Balance: ${ethers.formatEther(balance)} PYUSD`);
       
       if (balance < totalCost) {
         throw new Error(`Insufficient PYUSD balance. Need ${ethers.formatEther(totalCost)} PYUSD, have ${ethers.formatEther(balance)} PYUSD`);
       }
       
-      // Check allowance
-      const allowance = await pyusdToken.allowance(signer.address, raffle.address);
+      // Check allowance using read provider
+      const allowance = await pyusdTokenRead.allowance(signer.address, raffle.address);
       console.log(`🔓 Current Allowance: ${ethers.formatEther(allowance)} PYUSD`);
       
       if (allowance < totalCost) {
         console.log("🔐 Approving PYUSD spending...");
-        const approveTx = await pyusdToken.approve(raffle.address, totalCost);
+        const approveTx = await pyusdTokenWrite.approve(raffle.address, totalCost);
         await approveTx.wait();
         console.log("✅ PYUSD approved!");
       }
       
       // Buy tickets
       console.log("🎫 Purchasing tickets...");
-      const tx = await raffleContract.buyTicket(numTickets);
+      const tx = await raffleContractWrite.buyTicket(numTickets);
       await tx.wait();
       console.log("✅ Tickets bought successfully!");
       
@@ -302,9 +361,23 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
     }
   }, [copied]);
 
+  // Check current network
+  const checkNetwork = async () => {
+    try {
+      if (typeof window !== 'undefined' && window.ethereum) {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const network = await provider.getNetwork();
+        setCurrentNetwork(`${network.name} (Chain ID: ${network.chainId})`);
+      }
+    } catch (error) {
+      console.log('Could not check network:', error);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
     fetchRaffleData();
+    checkNetwork();
   }, [raffleAddress]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

@@ -10,7 +10,7 @@ import { uploadImage } from '@/lib/imageUpload'
 
 // Contract addresses
 const FACTORY_ADDRESS = process.env.NEXT_PUBLIC_FACTORY_ADDRESS || "0x6b18bf9DecF780c12cd8a218488696C3c1D1A93B";
-const PYUSD_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_PYUSD_TOKEN_ADDRESS as string;
+const PYUSD_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_PYUSD_TOKEN_ADDRESS || "0x79Bd6F9E7B7B25B343C762AE5a35b20353b2CCb8";
 
 // Admin wallet addresses from environment variables
 const ADMIN_ADDRESSES = process.env.NEXT_PUBLIC_ADMIN_ADDRESSES 
@@ -421,15 +421,19 @@ const AdminDashboard = () => {
       const provider = getProvider()
       const signer = await provider.getSigner()
       
+      // Use direct RPC for reading contract data
+      const readProvider = getReadOnlyProvider()
+      
       const raffleAbi = [
         "function closeIfReady() external",
         "function owner() external view returns (address)"
       ]
       
-      const raffle = new ethers.Contract(raffleAddress, raffleAbi, signer)
+      const raffleRead = new ethers.Contract(raffleAddress, raffleAbi, readProvider)
+      const raffleWrite = new ethers.Contract(raffleAddress, raffleAbi, signer)
       
-      // Check if user is the owner (required for admin-only close)
-      const owner = await raffle.owner()
+      // Check if user is the owner (required for admin-only close) using read provider
+      const owner = await raffleRead.owner()
       const userAddress = await signer.getAddress()
       
       if (owner.toLowerCase() !== userAddress.toLowerCase()) {
@@ -438,7 +442,7 @@ const AdminDashboard = () => {
       
       console.log('Auto-closing raffle...')
       
-      const tx = await raffle.closeIfReady()
+      const tx = await raffleWrite.closeIfReady()
       console.log('Close transaction hash:', tx.hash)
       
       const receipt = await tx.wait()

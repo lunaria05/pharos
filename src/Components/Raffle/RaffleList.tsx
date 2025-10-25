@@ -143,16 +143,20 @@ const RaffleList: React.FC = () => {
       const provider = getProvider();
       const signer = await provider.getSigner();
       
+      // Use direct RPC for reading contract data
+      const readProvider = getProvider();
+      
       // Raffle ABI for closing
       const raffleAbi = [
         "function closeIfReady() external",
         "function owner() external view returns (address)"
       ];
       
-      const raffle = new ethers.Contract(raffleAddress, raffleAbi, signer);
+      const raffleRead = new ethers.Contract(raffleAddress, raffleAbi, readProvider);
+      const raffleWrite = new ethers.Contract(raffleAddress, raffleAbi, signer);
       
-      // Check if user is the owner (required for admin-only close)
-      const owner = await raffle.owner();
+      // Check if user is the owner (required for admin-only close) using read provider
+      const owner = await raffleRead.owner();
       const userAddress = await signer.getAddress();
       
       if (owner.toLowerCase() !== userAddress.toLowerCase()) {
@@ -161,7 +165,7 @@ const RaffleList: React.FC = () => {
       
       console.log("🔒 Auto-closing raffle...");
       
-      const tx = await raffle.closeIfReady();
+      const tx = await raffleWrite.closeIfReady();
       console.log("Transaction hash:", tx.hash);
       
       const receipt = await tx.wait();
@@ -245,6 +249,9 @@ const RaffleList: React.FC = () => {
       const provider = getProvider();
       const signer = await provider.getSigner();
 
+      // Use direct RPC for reading contract data
+      const readProvider = getProvider();
+
       const raffleAbi = [
         "function distributePrize() external",
         "function owner() external view returns (address)",
@@ -252,18 +259,19 @@ const RaffleList: React.FC = () => {
         "function winner() external view returns (address)"
       ];
 
-      const raffle = new ethers.Contract(raffleAddress, raffleAbi, signer);
+      const raffleRead = new ethers.Contract(raffleAddress, raffleAbi, readProvider);
+      const raffleWrite = new ethers.Contract(raffleAddress, raffleAbi, signer);
 
-      // Owner check
-      const owner = await raffle.owner();
+      // Owner check using read provider
+      const owner = await raffleRead.owner();
       const userAddress = await signer.getAddress();
       if (owner.toLowerCase() !== userAddress.toLowerCase()) {
         throw new Error('Only the raffle owner can distribute the prize');
       }
 
-      // Basic preconditions
-      const isClosed = await raffle.isClosed();
-      const winner = await raffle.winner();
+      // Basic preconditions using read provider
+      const isClosed = await raffleRead.isClosed();
+      const winner = await raffleRead.winner();
       if (!isClosed) {
         throw new Error('Raffle must be closed before distributing the prize');
       }
@@ -271,7 +279,7 @@ const RaffleList: React.FC = () => {
         throw new Error('No winner set for this raffle');
       }
 
-      const tx = await raffle.distributePrize();
+      const tx = await raffleWrite.distributePrize();
       const receipt = await tx.wait();
       if (receipt?.status !== 1) {
         throw new Error('Prize distribution transaction failed');
