@@ -642,12 +642,12 @@ const RaffleList: React.FC = () => {
             return (
               <div
                 key={raffle.address}
-                className={`transition-all duration-700 ${
+                className={`transition-all duration-700 h-full ${
                   mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
                 }`}
                 style={{ transitionDelay: `${index * 100}ms` }}
               >
-                <div className="bg-white border-4 border-black shadow-[6px_6px_0px_rgba(0,0,0,0.8)] rounded-xl overflow-hidden hover:translate-y-[-4px] hover:shadow-[8px_8px_0px_rgba(0,0,0,0.8)] transition-all duration-300 group">
+                <div className="h-full bg-white border-4 border-black shadow-[6px_6px_0px_rgba(0,0,0,0.8)] rounded-xl overflow-hidden hover:translate-y-[-4px] hover:shadow-[8px_8px_0px_rgba(0,0,0,0.8)] transition-all duration-300 group">
                   {/* Image Section */}
                   <div className="relative aspect-square overflow-hidden bg-gray-100">
                     {/* Browser-style top bar */}
