@@ -166,8 +166,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
         "function maxTicketsPerUser() external view returns (uint256)",
         "function houseFeePercentage() external view returns (uint256)",
         "function prizeAmount() external view returns (uint256)",
-        "function entrants(uint256) external view returns (address)",
-        "function entrantsLength() external view returns (uint256)"
+        "function entrants(uint256) external view returns (address)"
       ];
       
       const raffleContract = new ethers.Contract(raffleAddress, raffleAbi, provider);
@@ -182,8 +181,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
         winner,
         maxTicketsPerUser,
         houseFeePercentage,
-        prizeAmount,
-        entrantsLength
+        prizeAmount
       ] = await Promise.all([
         raffleContract.prizeDescription(),
         raffleContract.ticketPrice(),
@@ -194,9 +192,56 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
         raffleContract.winner(),
         raffleContract.maxTicketsPerUser(),
         raffleContract.houseFeePercentage(),
-        raffleContract.prizeAmount(),
-        raffleContract.entrantsLength().catch(() => 0) // Fallback if function doesn't exist
+        raffleContract.prizeAmount()
       ]);
+      
+      // Get participant count by checking entrants array
+      let participants = 0;
+      try {
+        console.log('🔍 Getting participant count...');
+        
+        // Use a more efficient approach - try common array lengths first
+        const commonLengths = [0, 1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 75, 100, 150, 200, 300, 500, 1000];
+        let maxValidIndex = -1;
+        
+        // First, try to find the approximate range
+        for (const length of commonLengths) {
+          try {
+            await raffleContract.entrants(length);
+            maxValidIndex = length;
+          } catch (error) {
+            break;
+          }
+        }
+        
+        // If we found a valid index, do a binary search to find the exact length
+        if (maxValidIndex >= 0) {
+          let left = maxValidIndex;
+          let right = maxValidIndex * 2; // Start searching from the last known valid index
+          
+          // Binary search to find the exact length
+          while (left <= right) {
+            const mid = Math.floor((left + right) / 2);
+            try {
+              await raffleContract.entrants(mid);
+              left = mid + 1;
+            } catch (error) {
+              right = mid - 1;
+            }
+          }
+          participants = left;
+        } else {
+          participants = 0;
+        }
+        
+        console.log(`📊 Found ${participants} participants`);
+      } catch (error) {
+        console.warn('⚠️ Could not get participant count:', error);
+        // Fallback: estimate participants based on tickets sold
+        // This is not accurate but better than showing 0
+        participants = Math.max(1, Math.floor(Number(ticketsSold) / 2));
+        console.log(`📊 Estimated ${participants} participants (fallback)`);
+      }
       
       const raffleData: RaffleData = {
         address: raffleAddress,
@@ -211,7 +256,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
         maxTicketsPerUser: Number(maxTicketsPerUser),
         houseFeePercentage: Number(houseFeePercentage),
         prizeAmount: ethers.formatEther(prizeAmount),
-        participants: Number(entrantsLength),
+        participants: participants,
         imageUrl: undefined // Will be updated from MongoDB if available
       };
       
@@ -627,7 +672,6 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
                 <p className="text-3xl font-rubik font-black text-black">{raffle.participants.toLocaleString()}</p>
                 <p className="text-xs font-rubik text-gray-500 mt-1">unique entries</p>
               </div>
-
               {/* Max Tickets Per User */}
               <div className="bg-white border-4 border-black shadow-[6px_6px_0px_rgba(0,0,0,0.8)] rounded-xl p-5 hover:translate-y-[-4px] hover:shadow-[8px_8px_0px_rgba(0,0,0,0.8)] transition-all duration-200">
                 <p className="text-sm font-rubik font-bold text-gray-600 uppercase mb-2">Max Per User</p>
@@ -656,7 +700,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
               {/* House Fee */}
               <div className="bg-white border-4 border-black shadow-[6px_6px_0px_rgba(0,0,0,0.8)] rounded-xl p-5 hover:translate-y-[-4px] hover:shadow-[8px_8px_0px_rgba(0,0,0,0.8)] transition-all duration-200">
                 <p className="text-sm font-rubik font-bold text-gray-600 uppercase mb-2">House Fee</p>
-                <p className="text-3xl font-rubik font-black text-black">{raffle.houseFeePercentage}%</p>
+                <p className="text-3xl font-rubik font-black text-black">{(raffle.houseFeePercentage / 100).toFixed(2)}%</p>
                 <p className="text-xs font-rubik text-gray-500 mt-1">platform fee</p>
               </div>
             </div>
