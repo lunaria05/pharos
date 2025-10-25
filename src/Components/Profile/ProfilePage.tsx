@@ -50,10 +50,8 @@ const ProfilePage = () => {
   }, [authenticated, user])
 
   const getProvider = () => {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      return new ethers.BrowserProvider(window.ethereum);
-    }
-    throw new Error('MetaMask not found');
+    // Always use direct RPC to ensure we're on the correct network
+    return new ethers.JsonRpcProvider('https://sepolia-rollup.arbitrum.io/rpc');
   };
 
   const fetchUserRaffleData = async () => {

@@ -162,6 +162,11 @@ const AdminDashboard = () => {
     throw new Error('MetaMask not found')
   }
 
+  const getReadOnlyProvider = () => {
+    // Use direct RPC for read-only operations to avoid network issues
+    return new ethers.JsonRpcProvider('https://sepolia-rollup.arbitrum.io/rpc')
+  }
+
   const createRaffleContract = async () => {
     try {
       const provider = getProvider()
