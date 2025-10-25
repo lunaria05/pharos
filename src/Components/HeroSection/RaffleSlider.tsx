@@ -89,7 +89,7 @@ const RaffleSlider: React.FC = () => {
   };
 
   // Helper function to get participant count efficiently
-  const getParticipantCount = async (raffleContract: any): Promise<number> => {
+  const getParticipantCount = async (raffleContract: ethers.Contract): Promise<number> => {
     try {
       // Use a more efficient approach - try common array lengths first
       const commonLengths = [0, 1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 75, 100, 150, 200, 300, 500, 1000];
@@ -124,19 +124,19 @@ const RaffleSlider: React.FC = () => {
       } else {
         return 0;
       }
-    } catch (error) {
-      console.warn('⚠️ Could not get participant count:', error);
-      return 0;
-    }
+        } catch {
+          console.warn('⚠️ Could not get participant count');
+          return 0;
+        }
   };
 
   // Helper function to retry RPC calls with timeout
   const retryRpcCall = async (
-    operation: () => Promise<any>,
+    operation: () => Promise<unknown>,
     maxRetries: number = 3,
     delay: number = 1000,
     timeout: number = 10000
-  ): Promise<any> => {
+  ): Promise<unknown> => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         // Add timeout to the operation
@@ -146,7 +146,7 @@ const RaffleSlider: React.FC = () => {
         
         return await Promise.race([operation(), timeoutPromise]);
       } catch (error) {
-        console.warn(`⚠️ RPC call attempt ${attempt} failed:`, error);
+        console.warn(`⚠️ RPC call attempt ${attempt} failed`);
         
         if (attempt === maxRetries) {
           throw error;
@@ -204,7 +204,7 @@ const RaffleSlider: React.FC = () => {
         }
         
         // Get raffle addresses with retry
-        raffleAddresses = await retryRpcCall(() => factory.getRaffles());
+        raffleAddresses = await retryRpcCall(() => factory.getRaffles()) as string[];
         console.log('📋 Found raffle addresses:', raffleAddresses.length);
       } catch (error) {
         console.error('❌ Error fetching raffle addresses after retries:', error);
@@ -216,11 +216,24 @@ const RaffleSlider: React.FC = () => {
       // Filter for active raffles only
       const activeRaffles: LiveRaffle[] = [];
       
-      for (const address of raffleAddresses) {
+      for (const address of raffleAddresses as string[]) {
         try {
           const raffleContract = new ethers.Contract(address, raffleAbi, provider);
           
           // Fetch raffle data with retry logic
+          const raffleData = await retryRpcCall(() => Promise.all([
+            raffleContract.prizeDescription(),
+            raffleContract.ticketPrice(),
+            raffleContract.maxTickets(),
+            raffleContract.totalTicketsSold(),
+            raffleContract.endTime(),
+            raffleContract.isClosed(),
+            raffleContract.winner(),
+            raffleContract.maxTicketsPerUser(),
+            raffleContract.houseFeePercentage(),
+            raffleContract.prizeAmount()
+          ])) as [string, bigint, bigint, bigint, bigint, boolean, string, bigint, bigint, bigint];
+          
           const [
             title,
             ticketPrice,
@@ -232,18 +245,7 @@ const RaffleSlider: React.FC = () => {
             maxTicketsPerUser,
             houseFeePercentage,
             prizeAmount
-          ] = await retryRpcCall(() => Promise.all([
-            raffleContract.prizeDescription(),
-            raffleContract.ticketPrice(),
-            raffleContract.maxTickets(),
-            raffleContract.totalTicketsSold(),
-            raffleContract.endTime(),
-            raffleContract.isClosed(),
-            raffleContract.winner(),
-            raffleContract.maxTicketsPerUser(),
-            raffleContract.houseFeePercentage(),
-            raffleContract.prizeAmount()
-          ]));
+          ] = raffleData;
           
           // Get participant count
           const participants = await getParticipantCount(raffleContract);
@@ -333,7 +335,9 @@ const RaffleSlider: React.FC = () => {
   useEffect(() => {
     // Fetch live raffles on component mount
     fetchLiveRaffles();
+  }, []); // Only run on mount
 
+  useEffect(() => {
     // Set up intervals for slide rotation and countdown updates
     const slideInterval = setInterval(() => {
       if (liveRaffles.length > 0) {

@@ -210,6 +210,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
             await raffleContract.entrants(length);
             maxValidIndex = length;
           } catch (error) {
+            console.log(error,"error");
             break;
           }
         }
@@ -424,7 +425,7 @@ const IndividualRaffle: React.FC<IndividualRaffleProps> = ({ raffleAddress }) =>
     try {
       if (typeof window !== 'undefined' && window.ethereum) {
         const provider = new ethers.BrowserProvider(window.ethereum);
-        const network = await provider.getNetwork();
+          const network = await provider.getNetwork();
         // setCurrentNetwork(`${network.name} (Chain ID: ${network.chainId})`);
       }
     } catch (error) {
